@@ -7,9 +7,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#1e3a8a" />
   <title>Gestión de Notificaciones UNIJUD — Ruta GPS y PDF</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
       --primary: #1e3a8a;
@@ -53,6 +53,43 @@
       display: grid;
       gap: 10px;
     }
+    .upload-zone {
+      background: #f8fafc;
+      border: 2px dashed #2563eb;
+      border-radius: 10px;
+      padding: 11px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .upload-zone-label {
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .native-file-input {
+      font-size: 0.85rem;
+      color: var(--text);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      max-width: 100%;
+      cursor: pointer;
+    }
+    .native-file-input::file-selector-button {
+      background: var(--primary-light);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      margin-right: 10px;
+      cursor: pointer;
+    }
     .route-planner {
       background: #eff6ff;
       border: 1.5px solid #93c5fd;
@@ -95,24 +132,6 @@
     .btn-purple { background: var(--purple); color: #fff; }
     .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
     .btn-sm { padding: 6px 9px; font-size: 0.78rem; }
-
-    /* Contenedor nativo superpuesto para garantizar apertura del selector de archivos en iPadOS/Safari y escritorio */
-    .file-upload-wrapper {
-      position: relative;
-      display: inline-flex;
-      overflow: hidden;
-      border-radius: 8px;
-    }
-    .file-upload-wrapper input[type="file"] {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      cursor: pointer;
-      z-index: 2;
-      font-size: 100px;
-    }
 
     .filters-grid {
       display: grid;
@@ -325,19 +344,24 @@
 
 <header>
   <h1>Diligencias de Notificación UNIJUD — Diseño de Ruta y PDF</h1>
-  <div class="sub" id="headerMeta">Cargue el archivo Excel de Notificaciones Pendientes (Fila 8 encabezados)</div>
+  <div class="sub" id="headerMeta">Seleccione el archivo Excel de Notificaciones Pendientes</div>
 </header>
 
 <div class="container">
   <div class="toolbar">
     <div class="alert-banner" id="alertBanner"></div>
 
-    <!-- Carga y Exportación Principal -->
+    <!-- Selector de Archivo Nativo Directo (100% compatible con GitHub Pages y Safari/iPadOS) -->
+    <div class="upload-zone">
+      <div>
+        <div class="upload-zone-label">📂 1. Cargar Planilla Excel UNIJUD (.xlsx / .xls)</div>
+        <div style="font-size:0.75rem; color:#475569; margin-top:2px;">Toque el botón para abrir el explorador de archivos</div>
+      </div>
+      <input type="file" id="excelInput" class="native-file-input" />
+    </div>
+
+    <!-- Exportación y Limpieza -->
     <div class="row-btns">
-      <label class="file-upload-wrapper btn btn-primary" for="excelInput">
-        <span>📂 Cargar Excel UNIJUD</span>
-        <input type="file" id="excelInput" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" />
-      </label>
       <button type="button" class="btn btn-success" id="btnExport">📥 Exportar Excel (.xlsx)</button>
       <button type="button" class="btn btn-outline btn-sm" id="btnClear">🗑️ Limpiar Datos</button>
     </div>
@@ -404,7 +428,7 @@
 
     <div class="stats-bar">
       <span id="statsCount">0 registros cargados</span>
-      <span id="statsGps">Modo Local / Offline listo</span>
+      <span id="statsLib">Verificando motor Excel...</span>
     </div>
   </div>
 
@@ -447,8 +471,8 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'unijud_notificaciones_local_v2';
-const META_KEY = 'unijud_notificaciones_meta_v2';
+const STORAGE_KEY = 'unijud_notificaciones_gh_v4';
+const META_KEY = 'unijud_notificaciones_meta_gh_v4';
 
 const PRESET_ORIGINS = {
   JUZGADO_ILLAPEL: { label: 'Juzgado de Garantía de Illapel', lat: -31.6327, lon: -71.1653 },
@@ -471,6 +495,28 @@ function showAlert(msg) {
 }
 function hideAlert() {
   document.getElementById('alertBanner').style.display = 'none';
+}
+
+function updateLibStatus() {
+  const el = document.getElementById('statsLib');
+  const xlsxOk = typeof XLSX !== 'undefined';
+  const pdfOk = typeof window.jspdf !== 'undefined';
+  if (xlsxOk && pdfOk) {
+    el.textContent = '✅ Motores Excel y PDF listos';
+    el.style.color = '#15803d';
+  } else {
+    el.textContent = `⚠️ Excel: ${xlsxOk ? 'OK' : 'Error'} | PDF: ${pdfOk ? 'OK' : 'Error'}`;
+    el.style.color = '#b91c1c';
+  }
+}
+
+function normalizeColKey(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, '_');
 }
 
 function parseChileDate(dateStr, timeStr) {
@@ -502,39 +548,42 @@ function formatExcelCell(val) {
   return String(val).trim();
 }
 
-const excelInputEl = document.getElementById('excelInput');
-excelInputEl.addEventListener('click', function() {
-  this.value = '';
-});
-
-excelInputEl.addEventListener('change', function(e) {
-  const file = e.target.files[0];
+function handleExcelFile(e) {
+  const input = e.target;
+  const file = input.files && input.files[0];
   if (!file) return;
+
   if (typeof XLSX === 'undefined') {
-    showAlert('No se pudo cargar la librería SheetJS. Verifique su conexión a internet al abrir el archivo.');
+    showAlert('No se pudo cargar la librería de lectura Excel (SheetJS). Revise su conexión a internet y recargue la página.');
     return;
   }
+
   hideAlert();
-  document.getElementById('statsCount').textContent = 'Leyendo archivo Excel...';
+  document.getElementById('statsCount').textContent = `Procesando "${file.name}"...`;
 
   const reader = new FileReader();
-  reader.onerror = () => showAlert('Error al leer el archivo seleccionado.');
+  reader.onerror = function() {
+    showAlert('No se pudo leer el archivo seleccionado desde el dispositivo.');
+  };
   reader.onload = function(evt) {
     try {
       const data = new Uint8Array(evt.target.result);
       const workbook = XLSX.read(data, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const firstSheetName = workbook.SheetNames[0];
+      const firstSheet = workbook.Sheets[firstSheetName];
       const matrix = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
 
-      if (matrix.length < 2) {
-        showAlert('La hoja de cálculo parece estar vacía.');
+      if (!matrix || matrix.length < 2) {
+        showAlert('La hoja "' + firstSheetName + '" no contiene filas suficientes.');
         return;
       }
 
+      // Buscar fila de encabezados (detecta RUC, RIT, NOMBRE_PARTICIPANTE o DOMICILIO)
       let headerIdx = -1;
-      for (let i = 0; i < Math.min(20, matrix.length); i++) {
-        const rowUpper = matrix[i].map(c => String(c).trim().toUpperCase());
-        if (rowUpper.includes('RUC') && rowUpper.includes('RIT')) {
+      for (let i = 0; i < Math.min(25, matrix.length); i++) {
+        const rowNorm = matrix[i].map(c => normalizeColKey(c));
+        const hits = ['RUC', 'RIT', 'NOMBRE_PARTICIPANTE', 'DOMICILIO', 'COMUNA'].filter(k => rowNorm.includes(k)).length;
+        if (hits >= 2) {
           headerIdx = i;
           break;
         }
@@ -543,50 +592,57 @@ excelInputEl.addEventListener('change', function(e) {
 
       const headerRows = matrix.slice(0, headerIdx);
       const rawHeaders = matrix[headerIdx].map(h => String(h).trim());
+      const normHeaders = rawHeaders.map(h => normalizeColKey(h));
       const dataRows = matrix.slice(headerIdx + 1);
 
       const parsedRecords = [];
       dataRows.forEach((rowArr, idx) => {
         const obj = {};
+        const normObj = {};
         rawHeaders.forEach((colName, cIdx) => {
-          if (colName) obj[colName] = rowArr[cIdx] !== undefined ? rowArr[cIdx] : '';
+          const val = rowArr[cIdx] !== undefined ? rowArr[cIdx] : '';
+          if (colName) obj[colName] = val;
+          const nKey = normHeaders[cIdx];
+          if (nKey) normObj[nKey] = val;
         });
 
-        const rit = formatExcelCell(obj['RIT']);
-        const ruc = formatExcelCell(obj['RUC']);
-        const nombre = formatExcelCell(obj['NOMBRE_PARTICIPANTE']);
-        if (!rit && !ruc && !nombre) return;
+        const rit = formatExcelCell(normObj['RIT']);
+        const ruc = formatExcelCell(normObj['RUC']);
+        const nombre = formatExcelCell(normObj['NOMBRE_PARTICIPANTE'] || normObj['NOMBRE'] || normObj['INTERVINIENTE']);
+        const domicilio = formatExcelCell(normObj['DOMICILIO'] || normObj['DIRECCION']);
 
-        const comuna = formatExcelCell(obj['COMUNA']) || 'Sin Comuna';
-        const fechaAud = formatExcelCell(obj['FECHA_AUD']);
-        const horaAud = formatExcelCell(obj['HORA_AUD']);
+        if (!rit && !ruc && !nombre && !domicilio) return;
+
+        const comuna = formatExcelCell(normObj['COMUNA']) || 'Sin Comuna';
+        const fechaAud = formatExcelCell(normObj['FECHA_AUD']);
+        const horaAud = formatExcelCell(normObj['HORA_AUD']);
 
         parsedRecords.push({
-          id: formatExcelCell(obj['CRR_NOTIFICACION']) || `${rit}_${idx}`,
+          id: formatExcelCell(normObj['CRR_NOTIFICACION']) || `${rit || 'REG'}_${idx}`,
           raw: obj,
           ruc,
           rit,
-          estadoProcesal: formatExcelCell(obj['ESTADO_PROCESAL']),
-          vif: formatExcelCell(obj['VIF']).toUpperCase() === 'SI',
-          tipoNotif: formatExcelCell(obj['TIPO_NOTIFICACION']),
-          tipoPart: formatExcelCell(obj['TIPO_PARTICIPANTE']),
+          estadoProcesal: formatExcelCell(normObj['ESTADO_PROCESAL']),
+          vif: formatExcelCell(normObj['VIF']).toUpperCase() === 'SI',
+          tipoNotif: formatExcelCell(normObj['TIPO_NOTIFICACION']),
+          tipoPart: formatExcelCell(normObj['TIPO_PARTICIPANTE']),
           nombre,
-          rut: formatExcelCell(obj['RUT_PARTICIPANTE']),
-          domicilio: formatExcelCell(obj['DOMICILIO']),
+          rut: formatExcelCell(normObj['RUT_PARTICIPANTE'] || normObj['RUT']),
+          domicilio,
           comuna,
-          ente: formatExcelCell(obj['ENTE_NOTIFICADOR']),
+          ente: formatExcelCell(normObj['ENTE_NOTIFICADOR']),
           fechaAud,
           horaAud,
           audTimestamp: parseChileDate(fechaAud, horaAud),
-          tipoAud: formatExcelCell(obj['TIPO_AUD']),
-          glosa: formatExcelCell(obj['GLS_REFERENCIA']),
-          delitos: formatExcelCell(obj['DELITOS']),
-          lat: parseFloat(obj['LATITUD_GPS']) || null,
-          lon: parseFloat(obj['LONGITUD_GPS']) || null,
-          resultadoTerreno: formatExcelCell(obj['RESULTADO_TERRENO']),
-          observacionTerreno: formatExcelCell(obj['OBSERVACION_TERRENO']),
-          fechaGestionTerreno: formatExcelCell(obj['FECHA_HORA_GPS']),
-          precisionGps: formatExcelCell(obj['PRECISION_GPS_M']),
+          tipoAud: formatExcelCell(normObj['TIPO_AUD']),
+          glosa: formatExcelCell(normObj['GLS_REFERENCIA'] || normObj['REFERENCIA']),
+          delitos: formatExcelCell(normObj['DELITOS']),
+          lat: parseFloat(normObj['LATITUD_GPS']) || null,
+          lon: parseFloat(normObj['LONGITUD_GPS']) || null,
+          resultadoTerreno: formatExcelCell(normObj['RESULTADO_TERRENO']),
+          observacionTerreno: formatExcelCell(normObj['OBSERVACION_TERRENO']),
+          fechaGestionTerreno: formatExcelCell(normObj['FECHA_HORA_GPS']),
+          precisionGps: formatExcelCell(normObj['PRECISION_GPS_M']),
           selectedForRoute: false,
           routeOrder: null,
           distFromPrevKm: null
@@ -594,7 +650,7 @@ excelInputEl.addEventListener('change', function(e) {
       });
 
       if (parsedRecords.length === 0) {
-        showAlert('No se encontraron registros válidos debajo de la fila de encabezados.');
+        showAlert('No se encontraron registros válidos en el archivo "' + file.name + '". Verifique que sea la planilla de Notificaciones Pendientes.');
         return;
       }
 
@@ -603,12 +659,15 @@ excelInputEl.addEventListener('change', function(e) {
       saveState();
       populateFilters();
       renderList();
+      input.value = '';
     } catch (err) {
-      showAlert('Error procesando el Excel: ' + err.message);
+      showAlert('Error al procesar el archivo Excel: ' + err.message);
     }
   };
   reader.readAsArrayBuffer(file);
-});
+}
+
+document.getElementById('excelInput').addEventListener('change', handleExcelFile);
 
 function saveState() {
   try {
@@ -780,7 +839,7 @@ function renderList() {
   document.getElementById('selectedBadge').textContent = `${selectedList.length} seleccionadas`;
 
   if (list.length === 0) {
-    container.innerHTML = '<div class="card" style="text-align:center; color:#64748b;">No hay diligencias para mostrar con los filtros actuales.</div>';
+    container.innerHTML = '<div class="card" style="text-align:center; color:#64748b;">No hay diligencias cargadas o que coincidan con el filtro.</div>';
     updateFullMapsLink(selectedList);
     return;
   }
@@ -1325,6 +1384,7 @@ document.getElementById('btnClear').addEventListener('click', () => {
   }
 });
 
+updateLibStatus();
 loadState();
 populateFilters();
 renderList();
