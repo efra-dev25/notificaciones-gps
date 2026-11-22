@@ -7,9 +7,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#1e3a8a" />
   <title>Gestión de Notificaciones UNIJUD — Ruta GPS y PDF</title>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js" onerror="window.__xlsxErr=true"></script>
+  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js" onerror="window.__pdfErr=true"></script>
+  <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
       --primary: #1e3a8a;
@@ -351,13 +351,16 @@
   <div class="toolbar">
     <div class="alert-banner" id="alertBanner"></div>
 
-    <!-- Selector de Archivo Nativo Directo (100% compatible con GitHub Pages y Safari/iPadOS) -->
+    <!-- Selector de Archivo Nativo Directo -->
     <div class="upload-zone">
       <div>
         <div class="upload-zone-label">📂 1. Cargar Planilla Excel UNIJUD (.xlsx / .xls)</div>
         <div style="font-size:0.75rem; color:#475569; margin-top:2px;">Toque el botón para abrir el explorador de archivos</div>
       </div>
-      <input type="file" id="excelInput" class="native-file-input" />
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input type="file" id="excelInput" class="native-file-input" onchange="window.procesarExcel(this)" />
+        <button type="button" class="btn btn-primary btn-sm" id="btnProcessManual" onclick="window.procesarExcel(document.getElementById('excelInput'))">⚡ Procesar</button>
+      </div>
     </div>
 
     <!-- Exportación y Limpieza -->
@@ -471,8 +474,8 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'unijud_notificaciones_gh_v4';
-const META_KEY = 'unijud_notificaciones_meta_gh_v4';
+const STORAGE_KEY = 'unijud_notificaciones_gh_v5';
+const META_KEY = 'unijud_notificaciones_meta_gh_v5';
 
 const PRESET_ORIGINS = {
   JUZGADO_ILLAPEL: { label: 'Juzgado de Garantía de Illapel', lat: -31.6327, lon: -71.1653 },
@@ -497,17 +500,47 @@ function hideAlert() {
   document.getElementById('alertBanner').style.display = 'none';
 }
 
-function updateLibStatus() {
+function loadFallbackScript(src) {
+  return new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve(true);
+    s.onerror = () => resolve(false);
+    document.head.appendChild(s);
+  });
+}
+
+async function ensureLibrariesLoaded() {
   const el = document.getElementById('statsLib');
+  el.textContent = 'Cargando motores Excel/PDF...';
+
+  if (typeof XLSX === 'undefined') {
+    await loadFallbackScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+  }
+  if (typeof XLSX === 'undefined') {
+    await loadFallbackScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+  }
+
+  if (typeof window.jspdf === 'undefined') {
+    await loadFallbackScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadFallbackScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+  }
+
   const xlsxOk = typeof XLSX !== 'undefined';
   const pdfOk = typeof window.jspdf !== 'undefined';
+
   if (xlsxOk && pdfOk) {
     el.textContent = '✅ Motores Excel y PDF listos';
     el.style.color = '#15803d';
+  } else if (xlsxOk) {
+    el.textContent = '✅ Motor Excel listo (PDF sin conexión)';
+    el.style.color = '#15803d';
   } else {
-    el.textContent = `⚠️ Excel: ${xlsxOk ? 'OK' : 'Error'} | PDF: ${pdfOk ? 'OK' : 'Error'}`;
+    el.textContent = '❌ Bloqueo de red en librerías externas';
     el.style.color = '#b91c1c';
+    showAlert('El navegador o red bloqueó la descarga de la librería Excel (XLSX). Verifique su conexión a internet o desactive bloqueadores de scripts para este sitio.');
   }
+  return xlsxOk;
 }
 
 function normalizeColKey(str) {
@@ -516,7 +549,7 @@ function normalizeColKey(str) {
     .replace(/[̀-ͯ]/g, '')
     .trim()
     .toUpperCase()
-    .replace(/\s+/g, '_');
+    .replace(/[^A-Z0-9]+/g, '_');
 }
 
 function parseChileDate(dateStr, timeStr) {
@@ -548,22 +581,21 @@ function formatExcelCell(val) {
   return String(val).trim();
 }
 
-function handleExcelFile(e) {
-  const input = e.target;
-  const file = input.files && input.files[0];
-  if (!file) return;
-
-  if (typeof XLSX === 'undefined') {
-    showAlert('No se pudo cargar la librería de lectura Excel (SheetJS). Revise su conexión a internet y recargue la página.');
+window.procesarExcel = async function(inputEl) {
+  if (!inputEl || !inputEl.files || inputEl.files.length === 0) {
     return;
   }
+  const file = inputEl.files[0];
+
+  const xlsxReady = await ensureLibrariesLoaded();
+  if (!xlsxReady) return;
 
   hideAlert();
-  document.getElementById('statsCount').textContent = `Procesando "${file.name}"...`;
+  document.getElementById('statsCount').textContent = `Leyendo "${file.name}"...`;
 
   const reader = new FileReader();
   reader.onerror = function() {
-    showAlert('No se pudo leer el archivo seleccionado desde el dispositivo.');
+    showAlert('Error al leer el archivo seleccionado desde el equipo.');
   };
   reader.onload = function(evt) {
     try {
@@ -574,15 +606,14 @@ function handleExcelFile(e) {
       const matrix = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
 
       if (!matrix || matrix.length < 2) {
-        showAlert('La hoja "' + firstSheetName + '" no contiene filas suficientes.');
+        showAlert('La hoja "' + firstSheetName + '" no contiene datos suficientes.');
         return;
       }
 
-      // Buscar fila de encabezados (detecta RUC, RIT, NOMBRE_PARTICIPANTE o DOMICILIO)
       let headerIdx = -1;
       for (let i = 0; i < Math.min(25, matrix.length); i++) {
         const rowNorm = matrix[i].map(c => normalizeColKey(c));
-        const hits = ['RUC', 'RIT', 'NOMBRE_PARTICIPANTE', 'DOMICILIO', 'COMUNA'].filter(k => rowNorm.includes(k)).length;
+        const hits = ['RUC', 'RIT', 'NOMBRE_PARTICIPANTE', 'DOMICILIO', 'COMUNA', 'ENTE_NOTIFICADOR'].filter(k => rowNorm.includes(k)).length;
         if (hits >= 2) {
           headerIdx = i;
           break;
@@ -650,7 +681,7 @@ function handleExcelFile(e) {
       });
 
       if (parsedRecords.length === 0) {
-        showAlert('No se encontraron registros válidos en el archivo "' + file.name + '". Verifique que sea la planilla de Notificaciones Pendientes.');
+        showAlert('No se encontraron registros válidos en "' + file.name + '". Fila detectada como encabezado: ' + (headerIdx + 1));
         return;
       }
 
@@ -659,15 +690,12 @@ function handleExcelFile(e) {
       saveState();
       populateFilters();
       renderList();
-      input.value = '';
     } catch (err) {
       showAlert('Error al procesar el archivo Excel: ' + err.message);
     }
   };
   reader.readAsArrayBuffer(file);
-}
-
-document.getElementById('excelInput').addEventListener('change', handleExcelFile);
+};
 
 function saveState() {
   try {
@@ -1384,10 +1412,10 @@ document.getElementById('btnClear').addEventListener('click', () => {
   }
 });
 
-updateLibStatus();
 loadState();
 populateFilters();
 renderList();
+ensureLibrariesLoaded();
 </script>
 </body>
 </html>
