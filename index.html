@@ -7,9 +7,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#1e3a8a" />
   <title>Gestión de Notificaciones UNIJUD — Ruta GPS y PDF</title>
-  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js" onerror="window.__xlsxErr=true"></script>
-  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js" onerror="window.__pdfErr=true"></script>
-  <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
     :root {
       --primary: #1e3a8a;
@@ -474,8 +474,8 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'unijud_notificaciones_gh_v5';
-const META_KEY = 'unijud_notificaciones_meta_gh_v5';
+const STORAGE_KEY = 'unijud_notificaciones_gh_v6';
+const META_KEY = 'unijud_notificaciones_meta_gh_v6';
 
 const PRESET_ORIGINS = {
   JUZGADO_ILLAPEL: { label: 'Juzgado de Garantía de Illapel', lat: -31.6327, lon: -71.1653 },
@@ -518,12 +518,12 @@ async function ensureLibrariesLoaded() {
     await loadFallbackScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
   }
   if (typeof XLSX === 'undefined') {
-    await loadFallbackScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
+    await loadFallbackScript('https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js');
   }
 
   if (typeof window.jspdf === 'undefined') {
-    await loadFallbackScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    await loadFallbackScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    await loadFallbackScript('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    await loadFallbackScript('https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js');
   }
 
   const xlsxOk = typeof XLSX !== 'undefined';
@@ -538,7 +538,7 @@ async function ensureLibrariesLoaded() {
   } else {
     el.textContent = '❌ Bloqueo de red en librerías externas';
     el.style.color = '#b91c1c';
-    showAlert('El navegador o red bloqueó la descarga de la librería Excel (XLSX). Verifique su conexión a internet o desactive bloqueadores de scripts para este sitio.');
+    showAlert('El navegador o red bloqueó la descarga de la librería Excel (XLSX).');
   }
   return xlsxOk;
 }
@@ -591,7 +591,7 @@ window.procesarExcel = async function(inputEl) {
   if (!xlsxReady) return;
 
   hideAlert();
-  document.getElementById('statsCount').textContent = `Leyendo "${file.name}"...`;
+  document.getElementById('statsCount').textContent = 'Leyendo "' + file.name + '"...';
 
   const reader = new FileReader();
   reader.onerror = function() {
@@ -649,21 +649,21 @@ window.procesarExcel = async function(inputEl) {
         const horaAud = formatExcelCell(normObj['HORA_AUD']);
 
         parsedRecords.push({
-          id: formatExcelCell(normObj['CRR_NOTIFICACION']) || `${rit || 'REG'}_${idx}`,
+          id: formatExcelCell(normObj['CRR_NOTIFICACION']) || ((rit || 'REG') + '_' + idx),
           raw: obj,
-          ruc,
-          rit,
+          ruc: ruc,
+          rit: rit,
           estadoProcesal: formatExcelCell(normObj['ESTADO_PROCESAL']),
           vif: formatExcelCell(normObj['VIF']).toUpperCase() === 'SI',
           tipoNotif: formatExcelCell(normObj['TIPO_NOTIFICACION']),
           tipoPart: formatExcelCell(normObj['TIPO_PARTICIPANTE']),
-          nombre,
+          nombre: nombre,
           rut: formatExcelCell(normObj['RUT_PARTICIPANTE'] || normObj['RUT']),
-          domicilio,
-          comuna,
+          domicilio: domicilio,
+          comuna: comuna,
           ente: formatExcelCell(normObj['ENTE_NOTIFICADOR']),
-          fechaAud,
-          horaAud,
+          fechaAud: fechaAud,
+          horaAud: horaAud,
           audTimestamp: parseChileDate(fechaAud, horaAud),
           tipoAud: formatExcelCell(normObj['TIPO_AUD']),
           glosa: formatExcelCell(normObj['GLS_REFERENCIA'] || normObj['REFERENCIA']),
@@ -686,7 +686,7 @@ window.procesarExcel = async function(inputEl) {
       }
 
       records = parsedRecords;
-      fileMeta = { headerRows, rawHeaders };
+      fileMeta = { headerRows: headerRows, rawHeaders: rawHeaders };
       saveState();
       populateFilters();
       renderList();
@@ -724,7 +724,7 @@ function populateFilters() {
     const count = records.filter(r => r.comuna === c).length;
     const opt = document.createElement('option');
     opt.value = c;
-    opt.textContent = `${c} (${count})`;
+    opt.textContent = c + ' (' + count + ')';
     selComuna.appendChild(opt);
   });
   if (comunas.includes(prevComuna)) selComuna.value = prevComuna;
@@ -760,7 +760,7 @@ function getFilteredAndSorted() {
     if (fEstado === 'SELECCIONADAS' && !r.selectedForRoute) return false;
     if (fEstado === 'GESTIONADAS' && !r.resultadoTerreno) return false;
     if (q) {
-      const hay = `${r.rit} ${r.ruc} ${r.nombre} ${r.rut} ${r.domicilio} ${r.comuna}`.toLowerCase();
+      const hay = (r.rit + ' ' + r.ruc + ' ' + r.nombre + ' ' + r.rut + ' ' + r.domicilio + ' ' + r.comuna).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -863,8 +863,8 @@ function renderList() {
 
   const totalDone = records.filter(r => r.resultadoTerreno).length;
   document.getElementById('statsCount').textContent =
-    `Mostrando ${list.length} de ${records.length} | Gestionadas: ${totalDone}`;
-  document.getElementById('selectedBadge').textContent = `${selectedList.length} seleccionadas`;
+    'Mostrando ' + list.length + ' de ' + records.length + ' | Gestionadas: ' + totalDone;
+  document.getElementById('selectedBadge').textContent = selectedList.length + ' seleccionadas';
 
   if (list.length === 0) {
     container.innerHTML = '<div class="card" style="text-align:center; color:#64748b;">No hay diligencias cargadas o que coincidan con el filtro.</div>';
@@ -876,10 +876,13 @@ function renderList() {
     const isDone = Boolean(r.resultadoTerreno);
     const hasCoords = r.lat !== null && r.lon !== null;
     const mapsQuery = hasCoords
-      ? `https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lon}&travelmode=driving`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((r.domicilio || '') + ', ' + r.comuna + ', Chile')}`;
+      ? 'https://www.google.com/maps/dir/?api=1&destination=' + r.lat + ',' + r.lon + '&travelmode=driving'
+      : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((r.domicilio || '') + ', ' + r.comuna + ', Chile');
 
-    const audLabel = r.fechaAud ? `📅 Aud: ${r.fechaAud} ${r.horaAud || ''}` : 'Sin fecha aud.';
+    const audLabel = r.fechaAud ? '📅 Aud: ' + r.fechaAud + ' ' + (r.horaAud || '') : 'Sin fecha aud.';
+    const paradaBadge = (r.selectedForRoute && r.routeOrder !== null)
+      ? '<span class="tag tag-route">Parada #' + r.routeOrder + (r.distFromPrevKm !== null ? ' · ' + r.distFromPrevKm.toFixed(1) + ' km' : '') + '</span>'
+      : '';
 
     return `
       <div class="card ${r.selectedForRoute ? 'selected-route' : ''} ${isDone ? 'done' : ''} ${r.vif ? 'vif' : ''}">
@@ -892,7 +895,7 @@ function renderList() {
             </div>
           </div>
           <div class="badges">
-            ${r.selectedForRoute && r.routeOrder !== null ? `<span class="tag tag-route">Parada #${r.routeOrder}${r.distFromPrevKm !== null ? ' · ' + r.distFromPrevKm.toFixed(1) + ' km' : ''}</span>` : ''}
+            ${paradaBadge}
             ${r.vif ? '<span class="tag tag-vif">VIF</span>' : ''}
             <span class="tag tag-aud ${r.fechaAud ? 'urgent' : ''}">${audLabel}</span>
             ${isDone ? '<span class="tag tag-done">GESTIONADA</span>' : ''}
@@ -951,12 +954,12 @@ document.getElementById('btnGeocodeSelected').addEventListener('click', async ()
   for (let i = 0; i < target.length; i++) {
     if (stopGeoFlag) break;
     const item = target[i];
-    txt.textContent = `Ubicando ${i + 1} de ${target.length}: ${item.domicilio}, ${item.comuna}`;
-    fill.style.width = `${Math.round(((i + 1) / target.length) * 100)}%`;
+    txt.textContent = 'Ubicando ' + (i + 1) + ' de ' + target.length + ': ' + item.domicilio + ', ' + item.comuna;
+    fill.style.width = Math.round(((i + 1) / target.length) * 100) + '%';
 
     try {
-      const q = encodeURIComponent(`${item.domicilio}, ${item.comuna}, Chile`);
-      const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`);
+      const q = encodeURIComponent(item.domicilio + ', ' + item.comuna + ', Chile');
+      const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + q);
       const data = await resp.json();
       if (data && data.length > 0) {
         item.lat = parseFloat(data[0].lat);
@@ -1093,37 +1096,26 @@ document.getElementById('btnExportPdf').addEventListener('click', () => {
   doc.text('HOJA DE RUTA Y PROYECCIÓN DE DILIGENCIAS EN TERRENO', 14, 17);
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Comuna(s): ${comunasUnicas}  |  Punto de Inicio: ${originLabel}  |  Emisión: ${fechaStr} ${horaStr}`, 14, 23);
+  doc.text('Comuna(s): ' + comunasUnicas + '  |  Punto de Inicio: ' + originLabel + '  |  Emisión: ' + fechaStr + ' ' + horaStr, 14, 23);
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.text(
-    `Total Diligencias Proyectadas: ${routeItems.length}` +
-    (totalKm > 0 ? `   |   Distancia Estimada Acumulada: ${totalKm.toFixed(1)} km` : ''),
+    'Total Diligencias Proyectadas: ' + routeItems.length +
+    (totalKm > 0 ? '   |   Distancia Estimada Acumulada: ' + totalKm.toFixed(1) + ' km' : ''),
     10, 32
   );
 
   const tableBody = routeItems.map((r, idx) => {
-    const parada = `#${idx + 1}` + (r.distFromPrevKm !== null ? `
-(${r.distFromPrevKm.toFixed(1)} km)` : '');
-    const causa = `${r.rit || 'S/RIT'}
-RUC: ${r.ruc || '-'}${r.vif ? '
-[CAUSA VIF]' : ''}`;
-    const persona = `${r.nombre || 'Sin nombre'}
-RUT: ${r.rut || 'S/R'} (${r.tipoPart || '-'})`;
-    const domicilio = `${r.domicilio || 'Sin domicilio'}
-Comuna: ${r.comuna}` + (r.glosa ? `
-Ref: ${r.glosa}` : '');
-    const audiencia = `${r.tipoNotif || '-'}
-Aud: ${r.fechaAud || 'S/F'} ${r.horaAud || ''}
-${r.tipoAud || ''}`;
+    const parada = '#' + (idx + 1) + (r.distFromPrevKm !== null ? '\n(' + r.distFromPrevKm.toFixed(1) + ' km)' : '');
+    const causa = (r.rit || 'S/RIT') + '\nRUC: ' + (r.ruc || '-') + (r.vif ? '\n[CAUSA VIF]' : '');
+    const persona = (r.nombre || 'Sin nombre') + '\nRUT: ' + (r.rut || 'S/R') + ' (' + (r.tipoPart || '-') + ')';
+    const domicilio = (r.domicilio || 'Sin domicilio') + '\nComuna: ' + r.comuna + (r.glosa ? '\nRef: ' + r.glosa : '');
+    const audiencia = (r.tipoNotif || '-') + '\nAud: ' + (r.fechaAud || 'S/F') + ' ' + (r.horaAud || '') + '\n' + (r.tipoAud || '');
     const control = r.resultadoTerreno
-      ? `${r.resultadoTerreno}
-${r.observacionTerreno || ''}`
-      : '[  ] Notif. Pers.   [  ] Cédula/44
-[  ] Búsq. (+)       [  ] Búsq. (-)
-Hora: _____   Obs: ____________';
+      ? r.resultadoTerreno + '\n' + (r.observacionTerreno || '')
+      : '[  ] Notif. Pers.   [  ] Cédula/44\n[  ] Búsq. (+)       [  ] Búsq. (-)\nHora: _____   Obs: ____________';
 
     return [parada, causa, persona, domicilio, audiencia, control];
   });
@@ -1169,7 +1161,7 @@ Hora: _____   Obs: ____________';
       doc.setFontSize(7.5);
       doc.setTextColor(100, 116, 139);
       doc.text(
-        `Respaldo de Trabajo Proyectado en Terreno — Página ${data.pageNumber} de ${pageCount}`,
+        'Respaldo de Trabajo Proyectado en Terreno — Página ' + data.pageNumber + ' de ' + pageCount,
         10,
         doc.internal.pageSize.getHeight() - 8
       );
@@ -1183,7 +1175,7 @@ Hora: _____   Obs: ____________';
 
   const safeComuna = comunasUnicas.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 25) || 'General';
   const isoDate = now.toISOString().slice(0, 10);
-  doc.save(`Ruta_Diligencias_${safeComuna}_${isoDate}.pdf`);
+  doc.save('Ruta_Diligencias_' + safeComuna + '_' + isoDate + '.pdf');
 });
 
 function updateFullMapsLink(list) {
@@ -1193,11 +1185,11 @@ function updateFullMapsLink(list) {
     btn.style.display = 'none';
     return;
   }
-  const dest = `${pts[pts.length - 1].lat},${pts[pts.length - 1].lon}`;
-  const waypoints = pts.slice(0, -1).map(p => `${p.lat},${p.lon}`).join('|');
-  let url = `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
-  if (userPos) url += `&origin=${userPos.lat},${userPos.lon}`;
-  if (waypoints) url += `&waypoints=${encodeURIComponent(waypoints)}`;
+  const dest = pts[pts.length - 1].lat + ',' + pts[pts.length - 1].lon;
+  const waypoints = pts.slice(0, -1).map(p => p.lat + ',' + p.lon).join('|');
+  let url = 'https://www.google.com/maps/dir/?api=1&destination=' + dest + '&travelmode=driving';
+  if (userPos) url += '&origin=' + userPos.lat + ',' + userPos.lon;
+  if (waypoints) url += '&waypoints=' + encodeURIComponent(waypoints);
   btn.href = url;
   btn.style.display = 'inline-flex';
 }
@@ -1209,8 +1201,8 @@ function openModal(id) {
   selectedOutcome = rec.resultadoTerreno || '';
   currentModalGps = null;
 
-  document.getElementById('modalTitle').textContent = `${rec.rit} · ${rec.nombre}`;
-  document.getElementById('modalSubtitle').textContent = `${rec.domicilio || 'Sin domicilio'}, ${rec.comuna} | Aud: ${rec.fechaAud || 'S/F'} ${rec.horaAud || ''}`;
+  document.getElementById('modalTitle').textContent = rec.rit + ' · ' + rec.nombre;
+  document.getElementById('modalSubtitle').textContent = (rec.domicilio || 'Sin domicilio') + ', ' + rec.comuna + ' | Aud: ' + (rec.fechaAud || 'S/F') + ' ' + (rec.horaAud || '');
   document.getElementById('modalObs').value = rec.observacionTerreno || '';
 
   document.querySelectorAll('.status-opt').forEach(btn => {
@@ -1235,9 +1227,9 @@ function captureModalGps() {
       acc: Math.round(pos.coords.accuracy)
     };
     userPos = { lat: currentModalGps.lat, lon: currentModalGps.lon };
-    el.textContent = `✅ GPS: ${currentModalGps.lat.toFixed(6)}, ${currentModalGps.lon.toFixed(6)} (±${currentModalGps.acc} m)`;
+    el.textContent = '✅ GPS: ' + currentModalGps.lat.toFixed(6) + ', ' + currentModalGps.lon.toFixed(6) + ' (±' + currentModalGps.acc + ' m)';
   }, err => {
-    el.textContent = `ℹ️ Sin señal GPS (${err.message})`;
+    el.textContent = 'ℹ️ Sin señal GPS (' + err.message + ')';
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
 }
 
@@ -1323,7 +1315,7 @@ document.getElementById('btnSaveModal').addEventListener('click', () => {
     if (currentModalGps) {
       rec.lat = currentModalGps.lat;
       rec.lon = currentModalGps.lon;
-      rec.precisionGps = `${currentModalGps.acc} m`;
+      rec.precisionGps = currentModalGps.acc + ' m';
     }
     saveState();
     renderList();
@@ -1376,7 +1368,7 @@ document.getElementById('btnExport').addEventListener('click', () => {
 
   sortedExport.forEach(r => {
     const row = baseHeaders.map(h => r.raw[h] !== undefined ? r.raw[h] : '');
-    const linkMaps = (r.lat !== null && r.lon !== null) ? `https://maps.google.com/?q=${r.lat},${r.lon}` : '';
+    const linkMaps = (r.lat !== null && r.lon !== null) ? 'https://maps.google.com/?q=' + r.lat + ',' + r.lon : '';
     row.push(
       r.resultadoTerreno || '',
       r.observacionTerreno || '',
@@ -1393,7 +1385,7 @@ document.getElementById('btnExport').addEventListener('click', () => {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Notificaciones_Gestionadas');
   const todayStr = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `Notificaciones_Terreno_${todayStr}.xlsx`);
+  XLSX.writeFile(wb, 'Notificaciones_Terreno_' + todayStr + '.xlsx');
 });
 
 ['filterComuna', 'filterEnte', 'filterEstado', 'sortMode'].forEach(id => {
