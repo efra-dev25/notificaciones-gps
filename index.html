@@ -85,6 +85,7 @@
       gap: 5px;
       text-decoration: none;
       transition: opacity 0.15s;
+      user-select: none;
     }
     .btn:active { opacity: 0.8; }
     .btn-primary { background: var(--primary-light); color: #fff; }
@@ -95,16 +96,22 @@
     .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
     .btn-sm { padding: 6px 9px; font-size: 0.78rem; }
 
-    .file-input-hidden {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
+    /* Contenedor nativo superpuesto para garantizar apertura del selector de archivos en iPadOS/Safari y escritorio */
+    .file-upload-wrapper {
+      position: relative;
+      display: inline-flex;
       overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
+      border-radius: 8px;
+    }
+    .file-upload-wrapper input[type="file"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+      font-size: 100px;
     }
 
     .filters-grid {
@@ -327,8 +334,10 @@
 
     <!-- Carga y Exportación Principal -->
     <div class="row-btns">
-      <button type="button" class="btn btn-primary" id="btnPickExcel">📂 Cargar Excel UNIJUD</button>
-      <input type="file" id="excelInput" class="file-input-hidden" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" />
+      <label class="file-upload-wrapper btn btn-primary" for="excelInput">
+        <span>📂 Cargar Excel UNIJUD</span>
+        <input type="file" id="excelInput" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" />
+      </label>
       <button type="button" class="btn btn-success" id="btnExport">📥 Exportar Excel (.xlsx)</button>
       <button type="button" class="btn btn-outline btn-sm" id="btnClear">🗑️ Limpiar Datos</button>
     </div>
@@ -464,16 +473,6 @@ function hideAlert() {
   document.getElementById('alertBanner').style.display = 'none';
 }
 
-document.getElementById('btnPickExcel').addEventListener('click', () => {
-  if (typeof XLSX === 'undefined') {
-    showAlert('No se pudo cargar la librería SheetJS. Verifique su conexión a internet al abrir el archivo por primera vez.');
-    return;
-  }
-  const input = document.getElementById('excelInput');
-  input.value = '';
-  input.click();
-});
-
 function parseChileDate(dateStr, timeStr) {
   if (!dateStr) return Number.MAX_SAFE_INTEGER;
   let d = null;
@@ -503,9 +502,18 @@ function formatExcelCell(val) {
   return String(val).trim();
 }
 
-document.getElementById('excelInput').addEventListener('change', function(e) {
+const excelInputEl = document.getElementById('excelInput');
+excelInputEl.addEventListener('click', function() {
+  this.value = '';
+});
+
+excelInputEl.addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
+  if (typeof XLSX === 'undefined') {
+    showAlert('No se pudo cargar la librería SheetJS. Verifique su conexión a internet al abrir el archivo.');
+    return;
+  }
   hideAlert();
   document.getElementById('statsCount').textContent = 'Leyendo archivo Excel...';
 
@@ -742,7 +750,6 @@ document.getElementById('btnSelectTop').addEventListener('click', () => {
     alert('No hay diligencias pendientes visibles con el filtro actual.');
     return;
   }
-  // Limpiar selección previa y marcar los primeros N priorizando audiencia próxima
   records.forEach(r => { r.selectedForRoute = false; r.routeOrder = null; r.distFromPrevKm = null; });
   const chosen = visible.slice(0, limit);
   chosen.forEach((r, i) => {
@@ -838,7 +845,6 @@ function renderList() {
   updateFullMapsLink(selectedList);
 }
 
-// Geocodificar las diligencias seleccionadas (o las primeras 25 visibles si no hay selección)
 document.getElementById('btnGeocodeSelected').addEventListener('click', async () => {
   let target = records.filter(r => r.selectedForRoute && r.domicilio && (r.lat === null || r.lon === null));
   if (target.length === 0) {
@@ -964,7 +970,6 @@ document.getElementById('btnOptimizeRoute').addEventListener('click', () => {
   }
 });
 
-// Exportar Hoja de Ruta en PDF (jsPDF + AutoTable)
 document.getElementById('btnExportPdf').addEventListener('click', () => {
   if (!window.jspdf) {
     alert('La librería PDF aún no terminó de cargar. Verifique su conexión a internet.');
@@ -993,7 +998,6 @@ document.getElementById('btnExportPdf').addEventListener('click', () => {
   const fechaStr = now.toLocaleDateString('es-CL');
   const horaStr = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
 
-  // Encabezado Institucional
   doc.setFillColor(30, 58, 138);
   doc.rect(10, 10, 259, 16, 'F');
   doc.setTextColor(255, 255, 255);
@@ -1004,7 +1008,6 @@ document.getElementById('btnExportPdf').addEventListener('click', () => {
   doc.setFont('helvetica', 'normal');
   doc.text(`Comuna(s): ${comunasUnicas}  |  Punto de Inicio: ${originLabel}  |  Emisión: ${fechaStr} ${horaStr}`, 14, 23);
 
-  // Resumen superior
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
