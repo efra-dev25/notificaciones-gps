@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#1e3a8a" />
-  <title>Gestión de Notificaciones UNIJUD — Ruta GPS y PDF</title>
+  <title>Gestión de Notificaciones UNIJUD — Planilla de Viaje y Ruta GPS</title>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -43,7 +43,7 @@
     }
     header h1 { margin: 0; font-size: 1.05rem; font-weight: 700; }
     header .sub { font-size: 0.78rem; opacity: 0.9; margin-top: 3px; }
-    .container { max-width: 900px; margin: 0 auto; padding: 12px; }
+    .container { max-width: 920px; margin: 0 auto; padding: 12px; }
     .toolbar {
       background: var(--card);
       border: 1px solid var(--border);
@@ -107,6 +107,26 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 6px;
+    }
+    .trip-meta-box {
+      background: #ffffff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 7px;
+    }
+    .trip-meta-box label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 2px;
+    }
+    .trip-meta-box input {
+      padding: 5px 8px;
+      font-size: 0.8rem;
     }
     .row-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .btn {
@@ -220,8 +240,8 @@
       gap: 9px;
     }
     .route-checkbox {
-      width: 20px;
-      height: 20px;
+      width: 21px;
+      height: 21px;
       margin-top: 2px;
       accent-color: var(--primary-light);
       cursor: pointer;
@@ -245,10 +265,10 @@
     .tag-aud.urgent { background: #fee2e2; color: #991b1b; }
     .tag-vif { background: #dc2626; color: #fff; }
     .tag-route { background: #2563eb; color: #fff; }
+    .tag-estado { background: #dbeafe; color: #1e40af; }
     .tag-done { background: #dcfce7; color: #166534; }
 
     .person-name { font-weight: 700; font-size: 0.94rem; margin: 4px 0 2px; }
-    .person-meta { font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
     .address-box {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
@@ -256,15 +276,6 @@
       padding: 8px 10px;
       font-size: 0.87rem;
       margin-bottom: 8px;
-    }
-    .glosa-box {
-      font-size: 0.78rem;
-      color: #334155;
-      background: #fffbeb;
-      border-left: 3px solid #f59e0b;
-      padding: 5px 8px;
-      margin-bottom: 8px;
-      border-radius: 4px;
     }
     .result-summary {
       background: #dcfce7;
@@ -275,7 +286,30 @@
       font-size: 0.82rem;
       margin-bottom: 8px;
     }
-    .card-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-actions-left, .card-actions-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .btn-move {
+      background: #eff6ff;
+      color: #1e3a8a;
+      border: 1px solid #93c5fd;
+      font-weight: 800;
+      padding: 6px 10px;
+    }
+    .btn-move:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
 
     /* Modal */
     .modal-backdrop {
@@ -343,29 +377,29 @@
 <body>
 
 <header>
-  <h1>Diligencias de Notificación UNIJUD — Diseño de Ruta y PDF</h1>
-  <div class="sub" id="headerMeta">Seleccione el archivo Excel de Notificaciones Pendientes</div>
+  <h1>Planilla de Viaje y Ruta GPS — Juzgado de Garantía de Illapel</h1>
+  <div class="sub" id="headerMeta">Cargue el reporte "Notificaciones - detalle por fecha de trámite" (.xlsx / .xls)</div>
 </header>
 
 <div class="container">
   <div class="toolbar">
     <div class="alert-banner" id="alertBanner"></div>
 
-    <!-- Selector de Archivo Nativo Directo -->
+    <!-- Carga de Archivo UNIJUD -->
     <div class="upload-zone">
       <div>
-        <div class="upload-zone-label">📂 1. Cargar Planilla Excel UNIJUD (.xlsx / .xls)</div>
-        <div style="font-size:0.75rem; color:#475569; margin-top:2px;">Toque el botón para abrir el explorador de archivos</div>
+        <div class="upload-zone-label">📂 1. Cargar Reporte UNIJUD: Notificaciones - Detalle por Fecha de Trámite</div>
+        <div style="font-size:0.75rem; color:#475569; margin-top:2px;">Filtra automáticamente: Pendiente, Enviada y En tramitación (excluye Correo electrónico y Teléfono)</div>
       </div>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <input type="file" id="excelInput" class="native-file-input" onchange="window.procesarExcel(this)" />
-        <button type="button" class="btn btn-primary btn-sm" id="btnProcessManual" onclick="window.procesarExcel(document.getElementById('excelInput'))">⚡ Procesar</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="window.procesarExcel(document.getElementById('excelInput'))">⚡ Procesar</button>
       </div>
     </div>
 
-    <!-- Exportación y Limpieza -->
+    <!-- Exportación General y Limpieza -->
     <div class="row-btns">
-      <button type="button" class="btn btn-success" id="btnExport">📥 Exportar Excel (.xlsx)</button>
+      <button type="button" class="btn btn-outline btn-sm" id="btnExportAll">📥 Respaldo Completo (.xlsx)</button>
       <button type="button" class="btn btn-outline btn-sm" id="btnClear">🗑️ Limpiar Datos</button>
     </div>
 
@@ -377,26 +411,62 @@
       <select id="filterEnte">
         <option value="">Todos los Entes</option>
       </select>
-      <select id="filterEstado">
-        <option value="PENDIENTES">Solo Pendientes</option>
-        <option value="SELECCIONADAS">Solo Seleccionadas (Ruta)</option>
-        <option value="TODOS">Todas las Diligencias</option>
-        <option value="GESTIONADAS">Solo Gestionadas</option>
+      <select id="filterEstadoNotif">
+        <option value="">Todos los Estados (Pend/Env/Tram)</option>
+        <option value="Pendiente">Solo Pendiente</option>
+        <option value="Enviada">Solo Enviada</option>
+        <option value="En tramitacion">Solo En tramitación</option>
       </select>
-      <select id="sortMode">
-        <option value="RUTA_FIRST">Orden: Ruta Diseñada Primero</option>
-        <option value="COMUNA_AUD">Orden: Comuna + Audiencia Próxima</option>
-        <option value="AUD_ONLY">Orden: Audiencia más Próxima</option>
+      <select id="filterVista">
+        <option value="TODOS">Vista: Todas las Filtradas</option>
+        <option value="SELECCIONADAS">Vista: Solo en Hoja de Ruta</option>
+        <option value="PENDIENTES_TERRENO">Vista: Sin Gestión en Terreno</option>
+        <option value="GESTIONADAS">Vista: Con Gestión en Terreno</option>
       </select>
     </div>
 
-    <input type="text" id="searchInput" placeholder="Buscar por RIT, RUC, nombre, RUT o domicilio..." />
+    <div class="filters-grid">
+      <input type="text" id="searchInput" placeholder="Buscar por RIT, RUC, nombre, RUT o domicilio..." />
+      <select id="sortMode">
+        <option value="RUTA_FIRST">Orden: Paradas de Ruta Primero (Manual / GPS)</option>
+        <option value="AUD_ONLY">Orden: Audiencia más Próxima</option>
+        <option value="COMUNA_AUD">Orden: Comuna + Audiencia Próxima</option>
+      </select>
+    </div>
 
-    <!-- Planificador de Ruta del Día y Exportación PDF -->
+    <!-- Planificador de Ruta y Encabezado de Planilla de Viaje -->
     <div class="route-planner">
       <div class="route-planner-title">
-        <span>🧭 Planificador de Ruta del Día (Respaldo Imprimible)</span>
+        <span>🧭 Planificador de Ruta y Planilla de Viaje</span>
         <span id="selectedBadge" style="background:#1e3a8a; color:#fff; padding:2px 8px; border-radius:99px; font-size:0.76rem;">0 seleccionadas</span>
+      </div>
+
+      <!-- Datos de Cabecera del Formato Hoja de Ruta -->
+      <div class="trip-meta-box">
+        <div>
+          <label>FECHA VIAJE</label>
+          <input type="text" id="metaFecha" placeholder="Ej: 23/11/2026" />
+        </div>
+        <div>
+          <label>PATENTE TAXI</label>
+          <input type="text" id="metaPatente" placeholder="Opcional" />
+        </div>
+        <div>
+          <label>HORA INICIO</label>
+          <input type="text" id="metaHoraInicio" placeholder="Ej: 08:30" />
+        </div>
+        <div>
+          <label>DESTINO</label>
+          <input type="text" id="metaDestino" placeholder="Ej: Illapel / Salamanca" />
+        </div>
+        <div>
+          <label>TÉRMINO</label>
+          <input type="text" id="metaTermino" placeholder="Opcional" />
+        </div>
+        <div>
+          <label>KMS INICIAL / FINAL</label>
+          <input type="text" id="metaKms" placeholder="Ej: 12450 / " />
+        </div>
       </div>
 
       <div class="filters-grid">
@@ -414,9 +484,10 @@
       </div>
 
       <div class="row-btns">
-        <button type="button" class="btn btn-warning btn-sm" id="btnGeocodeSelected">📍 1. Ubicar Coordenadas (Seleccionadas)</button>
-        <button type="button" class="btn btn-primary btn-sm" id="btnOptimizeRoute">🧭 2. Ordenar Paradas por Cercanía</button>
-        <button type="button" class="btn btn-purple btn-sm" id="btnExportPdf">📄 3. Descargar Ruta en PDF</button>
+        <button type="button" class="btn btn-warning btn-sm" id="btnGeocodeSelected">📍 1. Ubicar Coordenadas</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnOptimizeRoute">🧭 2. Ordenar por Cercanía</button>
+        <button type="button" class="btn btn-success btn-sm" id="btnExportRouteExcel">📊 3. Hoja de Ruta Excel</button>
+        <button type="button" class="btn btn-purple btn-sm" id="btnExportRoutePdf">📄 4. Hoja de Ruta PDF</button>
         <a class="btn btn-outline btn-sm" id="btnFullMaps" href="#" target="_blank" style="display:none;">🗺️ Ver en Google Maps</a>
       </div>
     </div>
@@ -431,7 +502,7 @@
 
     <div class="stats-bar">
       <span id="statsCount">0 registros cargados</span>
-      <span id="statsLib">Verificando motor Excel...</span>
+      <span id="statsLib">Verificando motores Excel/PDF...</span>
     </div>
   </div>
 
@@ -474,8 +545,8 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'unijud_notificaciones_gh_v6';
-const META_KEY = 'unijud_notificaciones_meta_gh_v6';
+const STORAGE_KEY = 'unijud_planilla_viaje_v7';
+const META_KEY = 'unijud_planilla_viaje_meta_v7';
 
 const PRESET_ORIGINS = {
   JUZGADO_ILLAPEL: { label: 'Juzgado de Garantía de Illapel', lat: -31.6327, lon: -71.1653 },
@@ -490,6 +561,9 @@ let currentEditId = null;
 let selectedOutcome = '';
 let currentModalGps = null;
 let recognition = null;
+
+// Inicializar fecha de hoy por defecto en cabecera de viaje
+document.getElementById('metaFecha').value = new Date().toLocaleDateString('es-CL');
 
 function showAlert(msg) {
   const el = document.getElementById('alertBanner');
@@ -552,6 +626,14 @@ function normalizeColKey(str) {
     .replace(/[^A-Z0-9]+/g, '_');
 }
 
+function stripAccentsLower(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
 function parseChileDate(dateStr, timeStr) {
   if (!dateStr) return Number.MAX_SAFE_INTEGER;
   let d = null;
@@ -581,6 +663,63 @@ function formatExcelCell(val) {
   return String(val).trim();
 }
 
+function splitRitParts(ritStr) {
+  const clean = String(ritStr || '').trim();
+  // Ej: "O-725-2026" -> numero: "725", anio: "2026"
+  const m = clean.match(/^(?:[A-Za-z]+-)?(\d+)-(\d{4})$/);
+  if (m) {
+    return { ritNum: m[1], ritAnio: m[2] };
+  }
+  const parts = clean.split('-');
+  if (parts.length >= 2) {
+    return { ritNum: parts[parts.length - 2], ritAnio: parts[parts.length - 1] };
+  }
+  return { ritNum: clean, ritAnio: '' };
+}
+
+function extractCleanComuna(rawComuna, rawDomicilio) {
+  const s = String(rawComuna || '').trim();
+  if (s) {
+    // En reporte "Notificaciones - detalle por fecha de trámite", COMUNA suele traer:
+    // "LAS AÑAÑUCAS 237 DEPTO  , ILLAPEL (PARTICULAR)"
+    const m = s.match(/,\s*([A-ZÁÉÍÓÚÑ\s]+?)\s*\([^)]+\)\s*$/i);
+    if (m) {
+      return toTitleCase(m[1].trim());
+    }
+    if (!s.includes(',') && s.length <= 28) {
+      return toTitleCase(s);
+    }
+    const parts = s.split(',');
+    const last = parts[parts.length - 1].replace(/\([^)]*\)/g, '').trim();
+    if (last && last.length <= 28) return toTitleCase(last);
+  }
+  // Fallback desde domicilio si menciona comuna conocida
+  const domUpper = String(rawDomicilio || '').toUpperCase();
+  for (const c of ['ILLAPEL', 'SALAMANCA', 'LOS VILOS', 'CANELA']) {
+    if (domUpper.includes(c)) return toTitleCase(c);
+  }
+  return 'Sin Comuna';
+}
+
+function toTitleCase(str) {
+  return String(str || '')
+    .toLowerCase()
+    .split(/\s+/)
+    .map(w => w ? w[0].toUpperCase() + w.slice(1) : '')
+    .join(' ');
+}
+
+function isAllowedEstadoNotificacion(estadoStr) {
+  const norm = stripAccentsLower(estadoStr);
+  // Pendiente, Enviada, Enviadas, En tramitación
+  return norm === 'pendiente' || norm === 'enviada' || norm === 'enviadas' || norm === 'en tramitacion';
+}
+
+function isExcludedTipoNotificacion(tipoStr) {
+  const norm = stripAccentsLower(tipoStr);
+  return norm.includes('correo electronico') || norm.includes('correo') || norm.includes('telefono');
+}
+
 window.procesarExcel = async function(inputEl) {
   if (!inputEl || !inputEl.files || inputEl.files.length === 0) {
     return;
@@ -591,7 +730,7 @@ window.procesarExcel = async function(inputEl) {
   if (!xlsxReady) return;
 
   hideAlert();
-  document.getElementById('statsCount').textContent = 'Leyendo "' + file.name + '"...';
+  document.getElementById('statsCount').textContent = 'Leyendo y filtrando "' + file.name + '"...';
 
   const reader = new FileReader();
   reader.onerror = function() {
@@ -613,8 +752,8 @@ window.procesarExcel = async function(inputEl) {
       let headerIdx = -1;
       for (let i = 0; i < Math.min(25, matrix.length); i++) {
         const rowNorm = matrix[i].map(c => normalizeColKey(c));
-        const hits = ['RUC', 'RIT', 'NOMBRE_PARTICIPANTE', 'DOMICILIO', 'COMUNA', 'ENTE_NOTIFICADOR'].filter(k => rowNorm.includes(k)).length;
-        if (hits >= 2) {
+        const hits = ['RUC', 'RIT', 'TIPO_NOTIFICACION', 'NOMBRE_PARTICIPANTE', 'DOMICILIO', 'ESTADO_NOTIFICACION'].filter(k => rowNorm.includes(k)).length;
+        if (hits >= 3) {
           headerIdx = i;
           break;
         }
@@ -625,6 +764,11 @@ window.procesarExcel = async function(inputEl) {
       const rawHeaders = matrix[headerIdx].map(h => String(h).trim());
       const normHeaders = rawHeaders.map(h => normalizeColKey(h));
       const dataRows = matrix.slice(headerIdx + 1);
+
+      const hasEstadoCol = normHeaders.includes('ESTADO_NOTIFICACION');
+      let totalLeidas = 0;
+      let descartadasEstado = 0;
+      let descartadasTipo = 0;
 
       const parsedRecords = [];
       dataRows.forEach((rowArr, idx) => {
@@ -643,31 +787,50 @@ window.procesarExcel = async function(inputEl) {
         const domicilio = formatExcelCell(normObj['DOMICILIO'] || normObj['DIRECCION']);
 
         if (!rit && !ruc && !nombre && !domicilio) return;
+        totalLeidas++;
 
-        const comuna = formatExcelCell(normObj['COMUNA']) || 'Sin Comuna';
+        const estadoNotif = formatExcelCell(normObj['ESTADO_NOTIFICACION']);
+        if (hasEstadoCol && !isAllowedEstadoNotificacion(estadoNotif)) {
+          descartadasEstado++;
+          return;
+        }
+
+        const tipoNotif = formatExcelCell(normObj['TIPO_NOTIFICACION']);
+        if (isExcludedTipoNotificacion(tipoNotif)) {
+          descartadasTipo++;
+          return;
+        }
+
+        const rawComuna = formatExcelCell(normObj['COMUNA']);
+        const comuna = extractCleanComuna(rawComuna, domicilio);
         const fechaAud = formatExcelCell(normObj['FECHA_AUD']);
         const horaAud = formatExcelCell(normObj['HORA_AUD']);
+        const { ritNum, ritAnio } = splitRitParts(rit);
 
         parsedRecords.push({
           id: formatExcelCell(normObj['CRR_NOTIFICACION']) || ((rit || 'REG') + '_' + idx),
           raw: obj,
           ruc: ruc,
           rit: rit,
+          ritNum: ritNum,
+          ritAnio: ritAnio,
           estadoProcesal: formatExcelCell(normObj['ESTADO_PROCESAL']),
+          estadoNotif: estadoNotif || 'Pendiente',
           vif: formatExcelCell(normObj['VIF']).toUpperCase() === 'SI',
-          tipoNotif: formatExcelCell(normObj['TIPO_NOTIFICACION']),
+          tipoNotif: tipoNotif,
           tipoPart: formatExcelCell(normObj['TIPO_PARTICIPANTE']),
           nombre: nombre,
           rut: formatExcelCell(normObj['RUT_PARTICIPANTE'] || normObj['RUT']),
           domicilio: domicilio,
+          detalleDireccion: rawComuna,
           comuna: comuna,
           ente: formatExcelCell(normObj['ENTE_NOTIFICADOR']),
+          fechaTramite: formatExcelCell(normObj['FECHA_TRAMITE']),
           fechaAud: fechaAud,
           horaAud: horaAud,
           audTimestamp: parseChileDate(fechaAud, horaAud),
           tipoAud: formatExcelCell(normObj['TIPO_AUD']),
           glosa: formatExcelCell(normObj['GLS_REFERENCIA'] || normObj['REFERENCIA']),
-          delitos: formatExcelCell(normObj['DELITOS']),
           lat: parseFloat(normObj['LATITUD_GPS']) || null,
           lon: parseFloat(normObj['LONGITUD_GPS']) || null,
           resultadoTerreno: formatExcelCell(normObj['RESULTADO_TERRENO']),
@@ -681,7 +844,10 @@ window.procesarExcel = async function(inputEl) {
       });
 
       if (parsedRecords.length === 0) {
-        showAlert('No se encontraron registros válidos en "' + file.name + '". Fila detectada como encabezado: ' + (headerIdx + 1));
+        showAlert(
+          'No quedaron diligencias tras aplicar los filtros (Pendiente / Enviada / En tramitación, excluyendo Correo electrónico y Teléfono). ' +
+          'Filas leídas: ' + totalLeidas + '.'
+        );
         return;
       }
 
@@ -742,25 +908,30 @@ function populateFilters() {
 
   if (fileMeta.headerRows && fileMeta.headerRows.length > 1) {
     const titleLine = fileMeta.headerRows.map(r => r.filter(Boolean).join(' ')).filter(Boolean).slice(0, 3).join(' · ');
-    document.getElementById('headerMeta').textContent = titleLine || 'Archivo UNIJUD cargado';
+    document.getElementById('headerMeta').textContent = titleLine || 'Reporte UNIJUD cargado';
   }
 }
 
 function getFilteredAndSorted() {
   const fComuna = document.getElementById('filterComuna').value;
   const fEnte = document.getElementById('filterEnte').value;
-  const fEstado = document.getElementById('filterEstado').value;
+  const fEstadoNotif = document.getElementById('filterEstadoNotif').value;
+  const fVista = document.getElementById('filterVista').value;
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   const sortMode = document.getElementById('sortMode').value;
 
   let list = records.filter(r => {
     if (fComuna && r.comuna !== fComuna) return false;
     if (fEnte && r.ente !== fEnte) return false;
-    if (fEstado === 'PENDIENTES' && r.resultadoTerreno) return false;
-    if (fEstado === 'SELECCIONADAS' && !r.selectedForRoute) return false;
-    if (fEstado === 'GESTIONADAS' && !r.resultadoTerreno) return false;
+    if (fEstadoNotif) {
+      if (stripAccentsLower(r.estadoNotif) !== stripAccentsLower(fEstadoNotif)) return false;
+    }
+    if (fVista === 'SELECCIONADAS' && !r.selectedForRoute) return false;
+    if (fVista === 'PENDIENTES_TERRENO' && r.resultadoTerreno) return false;
+    if (fVista === 'GESTIONADAS' && !r.resultadoTerreno) return false;
+
     if (q) {
-      const hay = (r.rit + ' ' + r.ruc + ' ' + r.nombre + ' ' + r.rut + ' ' + r.domicilio + ' ' + r.comuna).toLowerCase();
+      const hay = (r.rit + ' ' + r.ruc + ' ' + r.nombre + ' ' + r.rut + ' ' + r.domicilio + ' ' + r.comuna + ' ' + r.tipoNotif).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -788,6 +959,19 @@ function getFilteredAndSorted() {
   return list;
 }
 
+function getOrderedRouteRecords() {
+  return records
+    .filter(r => r.selectedForRoute)
+    .sort((a, b) => (a.routeOrder || 999999) - (b.routeOrder || 999999));
+}
+
+function resequenceSelectedRoute() {
+  const selected = getOrderedRouteRecords();
+  selected.forEach((r, idx) => {
+    r.routeOrder = idx + 1;
+  });
+}
+
 function toggleSelectRecord(id) {
   const rec = records.find(r => r.id === id);
   if (!rec) return;
@@ -804,37 +988,33 @@ function toggleSelectRecord(id) {
   renderList();
 }
 
-function resequenceSelectedRoute() {
-  const selected = records
-    .filter(r => r.selectedForRoute)
-    .sort((a, b) => (a.routeOrder || 9999) - (b.routeOrder || 9999));
-  selected.forEach((r, idx) => { r.routeOrder = idx + 1; });
-}
-
 function moveRouteStop(id, dir) {
-  const selected = records
-    .filter(r => r.selectedForRoute)
-    .sort((a, b) => (a.routeOrder || 9999) - (b.routeOrder || 9999));
+  const selected = getOrderedRouteRecords();
   const idx = selected.findIndex(r => r.id === id);
   if (idx === -1) return;
   const swapIdx = idx + dir;
   if (swapIdx < 0 || swapIdx >= selected.length) return;
 
-  const temp = selected[idx].routeOrder;
-  selected[idx].routeOrder = selected[swapIdx].routeOrder;
-  selected[swapIdx].routeOrder = temp;
-  selected[idx].distFromPrevKm = null;
-  selected[swapIdx].distFromPrevKm = null;
+  // Intercambiar posiciones en el arreglo ordenado y renumerar 1..N
+  const movedItem = selected[idx];
+  selected.splice(idx, 1);
+  selected.splice(swapIdx, 0, movedItem);
 
+  selected.forEach((item, i) => {
+    item.routeOrder = i + 1;
+    item.distFromPrevKm = null;
+  });
+
+  document.getElementById('sortMode').value = 'RUTA_FIRST';
   saveState();
   renderList();
 }
 
 document.getElementById('btnSelectTop').addEventListener('click', () => {
   const limit = Math.max(1, parseInt(document.getElementById('batchLimit').value, 10) || 20);
-  const visible = getFilteredAndSorted().filter(r => !r.resultadoTerreno);
+  const visible = getFilteredAndSorted();
   if (visible.length === 0) {
-    alert('No hay diligencias pendientes visibles con el filtro actual.');
+    alert('No hay diligencias visibles con el filtro actual.');
     return;
   }
   records.forEach(r => { r.selectedForRoute = false; r.routeOrder = null; r.distFromPrevKm = null; });
@@ -857,14 +1037,13 @@ document.getElementById('btnClearSelection').addEventListener('click', () => {
 function renderList() {
   const container = document.getElementById('cardsList');
   const list = getFilteredAndSorted();
-  const selectedList = records
-    .filter(r => r.selectedForRoute)
-    .sort((a, b) => (a.routeOrder || 9999) - (b.routeOrder || 9999));
+  const selectedList = getOrderedRouteRecords();
+  const totalSelected = selectedList.length;
 
   const totalDone = records.filter(r => r.resultadoTerreno).length;
   document.getElementById('statsCount').textContent =
-    'Mostrando ' + list.length + ' de ' + records.length + ' | Gestionadas: ' + totalDone;
-  document.getElementById('selectedBadge').textContent = selectedList.length + ' seleccionadas';
+    'Mostrando ' + list.length + ' de ' + records.length + ' válidas | Gestionadas: ' + totalDone;
+  document.getElementById('selectedBadge').textContent = totalSelected + ' en hoja de ruta';
 
   if (list.length === 0) {
     container.innerHTML = '<div class="card" style="text-align:center; color:#64748b;">No hay diligencias cargadas o que coincidan con el filtro.</div>';
@@ -884,18 +1063,22 @@ function renderList() {
       ? '<span class="tag tag-route">Parada #' + r.routeOrder + (r.distFromPrevKm !== null ? ' · ' + r.distFromPrevKm.toFixed(1) + ' km' : '') + '</span>'
       : '';
 
+    const isFirstStop = r.routeOrder === 1;
+    const isLastStop = r.routeOrder === totalSelected;
+
     return `
       <div class="card ${r.selectedForRoute ? 'selected-route' : ''} ${isDone ? 'done' : ''} ${r.vif ? 'vif' : ''}">
         <div class="card-top">
           <div class="card-check-wrap">
-            <input type="checkbox" class="route-checkbox" ${r.selectedForRoute ? 'checked' : ''} onchange="toggleSelectRecord('${r.id}')" title="Incluir en la ruta del día" />
+            <input type="checkbox" class="route-checkbox" ${r.selectedForRoute ? 'checked' : ''} onchange="toggleSelectRecord('${r.id}')" title="Incluir en la Hoja de Ruta" />
             <div>
               <div class="rit-badge">${r.rit || 'S/RIT'} <span class="ruc-text">(${r.ruc})</span></div>
-              <div class="ruc-text">${r.comuna.toUpperCase()} · ${r.ente || 'Sin ente'} · ${r.tipoNotif}</div>
+              <div class="ruc-text">${r.comuna.toUpperCase()} · ${r.ente || 'Sin ente'} · <strong>${r.tipoNotif}</strong></div>
             </div>
           </div>
           <div class="badges">
             ${paradaBadge}
+            <span class="tag tag-estado">${r.estadoNotif}</span>
             ${r.vif ? '<span class="tag tag-vif">VIF</span>' : ''}
             <span class="tag tag-aud ${r.fechaAud ? 'urgent' : ''}">${audLabel}</span>
             ${isDone ? '<span class="tag tag-done">GESTIONADA</span>' : ''}
@@ -903,14 +1086,11 @@ function renderList() {
         </div>
 
         <div class="person-name">${r.nombre || 'Sin nombre'} <span style="font-weight:400; font-size:0.82rem; color:#475569;">(${r.tipoPart || 'Interviniente'} · RUT ${r.rut || 'S/R'})</span></div>
-        ${r.tipoAud ? `<div class="person-meta">${r.tipoAud}</div>` : ''}
 
         <div class="address-box">
           <strong>📍 Domicilio:</strong> ${r.domicilio || '<em>Sin domicilio registrado</em>'} — <strong>${r.comuna}</strong>
           ${hasCoords ? `<div style="font-size:0.74rem; color:#15803d; margin-top:3px;">🛰️ Coordenadas ubicadas (${r.lat.toFixed(5)}, ${r.lon.toFixed(5)})</div>` : ''}
         </div>
-
-        ${r.glosa ? `<div class="glosa-box"><strong>Ref.:</strong> ${r.glosa}</div>` : ''}
 
         ${isDone ? `
           <div class="result-summary">
@@ -921,11 +1101,16 @@ function renderList() {
         ` : ''}
 
         <div class="card-actions">
-          <button type="button" class="btn btn-primary btn-sm" onclick="openModal('${r.id}')">✍️ ${isDone ? 'Editar' : 'Registrar'}</button>
-          <a class="btn btn-outline btn-sm" href="${mapsQuery}" target="_blank">🗺️ Mapa</a>
+          <div class="card-actions-left">
+            <button type="button" class="btn btn-primary btn-sm" onclick="openModal('${r.id}')">✍️ ${isDone ? 'Editar' : 'Registrar'}</button>
+            <a class="btn btn-outline btn-sm" href="${mapsQuery}" target="_blank">🗺️ Mapa</a>
+          </div>
           ${r.selectedForRoute ? `
-            <button type="button" class="btn btn-outline btn-sm" onclick="moveRouteStop('${r.id}', -1)" title="Subir en la ruta">↑</button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="moveRouteStop('${r.id}', 1)" title="Bajar en la ruta">↓</button>
+            <div class="card-actions-right">
+              <span style="font-size:0.75rem; color:#1e3a8a; font-weight:700;">Orden:</span>
+              <button type="button" class="btn btn-move btn-sm" onclick="moveRouteStop('${r.id}', -1)" ${isFirstStop ? 'disabled' : ''} title="Subir parada en la ruta">▲ Subir</button>
+              <button type="button" class="btn btn-move btn-sm" onclick="moveRouteStop('${r.id}', 1)" ${isLastStop ? 'disabled' : ''} title="Bajar parada en la ruta">▼ Bajar</button>
+            </div>
           ` : ''}
         </div>
       </div>
@@ -1033,7 +1218,7 @@ document.getElementById('btnOptimizeRoute').addEventListener('click', () => {
 
   const withCoords = selected.filter(r => r.lat !== null && r.lon !== null);
   if (withCoords.length === 0) {
-    alert('Ninguna de las diligencias seleccionadas tiene coordenadas aún. Presione "1. Ubicar Coordenadas (Seleccionadas)" primero.');
+    alert('Ninguna de las diligencias seleccionadas tiene coordenadas aún. Presione "1. Ubicar Coordenadas" primero.');
     return;
   }
 
@@ -1043,7 +1228,7 @@ document.getElementById('btnOptimizeRoute').addEventListener('click', () => {
     userPos = { lat: PRESET_ORIGINS[originKey].lat, lon: PRESET_ORIGINS[originKey].lon };
     runNearestNeighbor(userPos.lat, userPos.lon, selected);
   } else if (originKey === 'PRIMERA_SELECCIONADA') {
-    const first = selected.sort((a, b) => (a.routeOrder || 999) - (b.routeOrder || 999)).find(r => r.lat !== null);
+    const first = getOrderedRouteRecords().find(r => r.lat !== null);
     userPos = { lat: first.lat, lon: first.lon };
     runNearestNeighbor(userPos.lat, userPos.lon, selected);
   } else {
@@ -1060,122 +1245,201 @@ document.getElementById('btnOptimizeRoute').addEventListener('click', () => {
   }
 });
 
-document.getElementById('btnExportPdf').addEventListener('click', () => {
+function getTripHeaderValues() {
+  const routeItems = getOrderedRouteRecords();
+  const comunasUnicas = [...new Set(routeItems.map(r => r.comuna).filter(c => c !== 'Sin Comuna'))].join(' / ');
+  return {
+    fecha: document.getElementById('metaFecha').value.trim() || new Date().toLocaleDateString('es-CL'),
+    patente: document.getElementById('metaPatente').value.trim(),
+    horaInicio: document.getElementById('metaHoraInicio').value.trim(),
+    destino: document.getElementById('metaDestino').value.trim() || comunasUnicas,
+    termino: document.getElementById('metaTermino').value.trim(),
+    kms: document.getElementById('metaKms').value.trim()
+  };
+}
+
+// 1) EXPORTACIÓN HOJA DE RUTA EN EXCEL (MODELO ADJUNTO "Formato hoja de RUTA.xlsx")
+document.getElementById('btnExportRouteExcel').addEventListener('click', () => {
+  if (typeof XLSX === 'undefined') {
+    alert('La librería Excel aún no termina de cargar.');
+    return;
+  }
+  const routeItems = getOrderedRouteRecords();
+  if (routeItems.length === 0) {
+    alert('No hay diligencias seleccionadas para la Hoja de Ruta. Marque las casillas o use "Seleccionar Top N".');
+    return;
+  }
+
+  const meta = getTripHeaderValues();
+  const kmsParts = meta.kms.split('/');
+  const kmsInicial = (kmsParts[0] || '').trim();
+  const kmsFinal = (kmsParts[1] || '').trim();
+
+  // Estructura exacta del archivo "Formato hoja de RUTA.xlsx"
+  const aoa = [
+    ['', 'PLANILLA DE VIAJE NOTIFICACIONES JUZGADO DE GARANTIA ILLAPEL', '', '', '', ''],
+    ['', '', '', 'FECHA: ' + meta.fecha, '', 'Patente Taxi: ' + meta.patente],
+    ['', '', '', 'HORA INICIO: ' + meta.horaInicio, '', 'DESTINO: ' + meta.destino + '   TÉRMINO: ' + meta.termino],
+    ['', '', '', 'KMS INICIAL: ' + kmsInicial, '', 'KMS FINAL: ' + kmsFinal],
+    ['N°', 'RIT', 'año', 'TIPO NOTIF', 'PERSONAAFECTANOTIFICACION', 'DIRECCIONNOTIF']
+  ];
+
+  routeItems.forEach((r, idx) => {
+    const dirCompleta = r.domicilio
+      ? r.domicilio + (r.comuna && r.comuna !== 'Sin Comuna' ? ', ' + r.comuna : '')
+      : (r.detalleDireccion || '');
+
+    aoa.push([
+      idx + 1,
+      r.ritNum || r.rit || '',
+      r.ritAnio || '',
+      r.tipoNotif || '',
+      r.nombre || '',
+      dirCompleta
+    ]);
+  });
+
+  // Completar hasta al menos 19 filas numeradas si hay menos, igual que el formato modelo
+  for (let n = routeItems.length + 1; n <= 19; n++) {
+    aoa.push([n, '', '', '', '', '']);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [
+    { wch: 6 },
+    { wch: 10 },
+    { wch: 8 },
+    { wch: 22 },
+    { wch: 42 },
+    { wch: 52 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Hoja1');
+  const isoDate = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, 'Planilla_Viaje_Notificaciones_' + isoDate + '.xlsx');
+});
+
+// 2) EXPORTACIÓN HOJA DE RUTA EN PDF (MODELO ADJUNTO "Formato hoja de RUTA.xlsx")
+document.getElementById('btnExportRoutePdf').addEventListener('click', () => {
   if (!window.jspdf) {
     alert('La librería PDF aún no terminó de cargar. Verifique su conexión a internet.');
     return;
   }
-  let routeItems = records
-    .filter(r => r.selectedForRoute)
-    .sort((a, b) => (a.routeOrder || 9999) - (b.routeOrder || 9999));
-
+  const routeItems = getOrderedRouteRecords();
   if (routeItems.length === 0) {
     alert('No hay diligencias seleccionadas para generar el PDF. Marque las casillas o use "Seleccionar Top N".');
     return;
   }
 
+  const meta = getTripHeaderValues();
+  const kmsParts = meta.kms.split('/');
+  const kmsInicial = (kmsParts[0] || '').trim();
+  const kmsFinal = (kmsParts[1] || '').trim();
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
 
-  const comunasUnicas = [...new Set(routeItems.map(r => r.comuna))].join(', ');
-  const originKey = document.getElementById('startOriginSelect').value;
-  const originLabel = PRESET_ORIGINS[originKey]
-    ? PRESET_ORIGINS[originKey].label
-    : (originKey === 'PRIMERA_SELECCIONADA' ? 'Primera parada seleccionada' : 'GPS del equipo');
-
-  const totalKm = routeItems.reduce((acc, r) => acc + (r.distFromPrevKm || 0), 0);
-  const now = new Date();
-  const fechaStr = now.toLocaleDateString('es-CL');
-  const horaStr = now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
-
-  doc.setFillColor(30, 58, 138);
-  doc.rect(10, 10, 259, 16, 'F');
-  doc.setTextColor(255, 255, 255);
+  // Encabezado replicando "Formato hoja de RUTA.xlsx"
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('HOJA DE RUTA Y PROYECCIÓN DE DILIGENCIAS EN TERRENO', 14, 17);
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Comuna(s): ' + comunasUnicas + '  |  Punto de Inicio: ' + originLabel + '  |  Emisión: ' + fechaStr + ' ' + horaStr, 14, 23);
-
   doc.setTextColor(15, 23, 42);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text(
-    'Total Diligencias Proyectadas: ' + routeItems.length +
-    (totalKm > 0 ? '   |   Distancia Estimada Acumulada: ' + totalKm.toFixed(1) + ' km' : ''),
-    10, 32
-  );
+  doc.text('PLANILLA DE VIAJE NOTIFICACIONES JUZGADO DE GARANTIA ILLAPEL', 24, 15);
 
-  const tableBody = routeItems.map((r, idx) => {
-    const parada = '#' + (idx + 1) + (r.distFromPrevKm !== null ? '\n(' + r.distFromPrevKm.toFixed(1) + ' km)' : '');
-    const causa = (r.rit || 'S/RIT') + '\nRUC: ' + (r.ruc || '-') + (r.vif ? '\n[CAUSA VIF]' : '');
-    const persona = (r.nombre || 'Sin nombre') + '\nRUT: ' + (r.rut || 'S/R') + ' (' + (r.tipoPart || '-') + ')';
-    const domicilio = (r.domicilio || 'Sin domicilio') + '\nComuna: ' + r.comuna + (r.glosa ? '\nRef: ' + r.glosa : '');
-    const audiencia = (r.tipoNotif || '-') + '\nAud: ' + (r.fechaAud || 'S/F') + ' ' + (r.horaAud || '') + '\n' + (r.tipoAud || '');
-    const control = r.resultadoTerreno
-      ? r.resultadoTerreno + '\n' + (r.observacionTerreno || '')
-      : '[  ] Notif. Pers.   [  ] Cédula/44\n[  ] Búsq. (+)       [  ] Búsq. (-)\nHora: _____   Obs: ____________';
-
-    return [parada, causa, persona, domicilio, audiencia, control];
+  // Bloque de datos de viaje superior derecho (filas 2-4 del formato)
+  doc.autoTable({
+    startY: 18,
+    margin: { left: 95, right: 12 },
+    body: [
+      ['FECHA: ' + meta.fecha, 'Patente Taxi: ' + meta.patente],
+      ['HORA INICIO: ' + meta.horaInicio, 'DESTINO: ' + meta.destino + '     TÉRMINO: ' + meta.termino],
+      ['KMS INICIAL: ' + kmsInicial, 'KMS FINAL: ' + kmsFinal]
+    ],
+    theme: 'grid',
+    styles: {
+      fontSize: 8.5,
+      cellPadding: 1.8,
+      textColor: [15, 23, 42],
+      lineColor: [120, 130, 145],
+      lineWidth: 0.25,
+      fontStyle: 'bold'
+    },
+    columnStyles: {
+      0: { cellWidth: 62 },
+      1: { cellWidth: 110 }
+    }
   });
 
+  const tableBody = routeItems.map((r, idx) => {
+    const dirCompleta = r.domicilio
+      ? r.domicilio + (r.comuna && r.comuna !== 'Sin Comuna' ? ', ' + r.comuna : '')
+      : (r.detalleDireccion || '');
+    const audInfo = r.fechaAud ? (r.fechaAud + (r.horaAud ? ' ' + r.horaAud : '')) : '';
+
+    return [
+      String(idx + 1),
+      r.ritNum || r.rit || '',
+      r.ritAnio || '',
+      r.tipoNotif || '',
+      r.nombre || '',
+      dirCompleta,
+      audInfo
+    ];
+  });
+
+  // Rellenar filas vacías hasta 19 si hay menos paradas, manteniendo el formato planilla física
+  for (let n = routeItems.length + 1; n <= 19; n++) {
+    tableBody.push([String(n), '', '', '', '', '', '']);
+  }
+
   doc.autoTable({
-    startY: 35,
-    margin: { left: 10, right: 10, bottom: 18 },
-    head: [['#', 'RIT / RUC', 'Interviniente / RUT', 'Domicilio y Referencia', 'Notificación / Audiencia', 'Control en Terreno']],
+    startY: doc.lastAutoTable.finalY + 4,
+    margin: { left: 12, right: 12, bottom: 16 },
+    head: [['N°', 'RIT', 'año', 'TIPO NOTIF', 'PERSONAAFECTANOTIFICACION', 'DIRECCIONNOTIF', 'AUD. PRÓX.']],
     body: tableBody,
     theme: 'grid',
     styles: {
-      fontSize: 7.5,
-      cellPadding: 2.2,
+      fontSize: 8,
+      cellPadding: 2,
       valign: 'middle',
-      lineColor: [180, 190, 205],
-      lineWidth: 0.2
+      textColor: [15, 23, 42],
+      lineColor: [120, 130, 145],
+      lineWidth: 0.25
     },
     headStyles: {
-      fillColor: [30, 58, 138],
-      textColor: [255, 255, 255],
+      fillColor: [241, 245, 249],
+      textColor: [15, 23, 42],
       fontStyle: 'bold',
       fontSize: 8
     },
     columnStyles: {
-      0: { cellWidth: 14, halign: 'center', fontStyle: 'bold' },
-      1: { cellWidth: 32 },
-      2: { cellWidth: 46 },
-      3: { cellWidth: 68 },
-      4: { cellWidth: 45 },
-      5: { cellWidth: 54 }
-    },
-    didParseCell: function(data) {
-      if (data.section === 'body' && data.column.index === 1) {
-        const rawText = String(data.cell.raw || '');
-        if (rawText.includes('[CAUSA VIF]')) {
-          data.cell.styles.textColor = [185, 28, 28];
-          data.cell.styles.fontStyle = 'bold';
-        }
-      }
+      0: { cellWidth: 11, halign: 'center' },
+      1: { cellWidth: 18, halign: 'left' },
+      2: { cellWidth: 14, halign: 'center' },
+      3: { cellWidth: 36 },
+      4: { cellWidth: 68 },
+      5: { cellWidth: 83 },
+      6: { cellWidth: 25, halign: 'center' }
     },
     didDrawPage: function(data) {
       const pageCount = doc.internal.getNumberOfPages();
       doc.setFontSize(7.5);
       doc.setTextColor(100, 116, 139);
       doc.text(
-        'Respaldo de Trabajo Proyectado en Terreno — Página ' + data.pageNumber + ' de ' + pageCount,
-        10,
-        doc.internal.pageSize.getHeight() - 8
+        'Juzgado de Garantía de Illapel — Planilla de Viaje Notificaciones (Página ' + data.pageNumber + ' de ' + pageCount + ')',
+        12,
+        doc.internal.pageSize.getHeight() - 7
       );
       doc.text(
-        'Firma / Timbre Responsable: ___________________________',
-        185,
-        doc.internal.pageSize.getHeight() - 8
+        'Firma Notificador: ___________________________',
+        195,
+        doc.internal.pageSize.getHeight() - 7
       );
     }
   });
 
-  const safeComuna = comunasUnicas.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 25) || 'General';
-  const isoDate = now.toISOString().slice(0, 10);
-  doc.save('Ruta_Diligencias_' + safeComuna + '_' + isoDate + '.pdf');
+  const isoDate = new Date().toISOString().slice(0, 10);
+  doc.save('Planilla_Viaje_Notificaciones_' + isoDate + '.pdf');
 });
 
 function updateFullMapsLink(list) {
@@ -1332,17 +1596,19 @@ function closeModal() {
 }
 document.getElementById('btnCancelModal').addEventListener('click', closeModal);
 
-document.getElementById('btnExport').addEventListener('click', () => {
+// Respaldo completo en Excel con todas las columnas originales + gestión
+document.getElementById('btnExportAll').addEventListener('click', () => {
   if (records.length === 0) {
     alert('No hay datos cargados para exportar.');
     return;
   }
 
   const baseHeaders = fileMeta.rawHeaders.length > 0
-    ? fileMeta.rawHeaders.filter(h => !['RESULTADO_TERRENO','OBSERVACION_TERRENO','FECHA_HORA_GPS','LATITUD_GPS','LONGITUD_GPS','PRECISION_GPS_M','LINK_GOOGLE_MAPS'].includes(h))
+    ? fileMeta.rawHeaders.filter(h => !['ORDEN_RUTA','RESULTADO_TERRENO','OBSERVACION_TERRENO','FECHA_HORA_GPS','LATITUD_GPS','LONGITUD_GPS','PRECISION_GPS_M','LINK_GOOGLE_MAPS'].includes(h))
     : Object.keys(records[0].raw);
 
   const extraHeaders = [
+    'ORDEN_RUTA',
     'RESULTADO_TERRENO',
     'OBSERVACION_TERRENO',
     'FECHA_HORA_GPS',
@@ -1361,6 +1627,8 @@ document.getElementById('btnExport').addEventListener('click', () => {
   aoa.push(finalHeaders);
 
   const sortedExport = [...records].sort((a, b) => {
+    if (a.selectedForRoute !== b.selectedForRoute) return a.selectedForRoute ? -1 : 1;
+    if (a.selectedForRoute && b.selectedForRoute) return (a.routeOrder || 999) - (b.routeOrder || 999);
     const c = a.comuna.localeCompare(b.comuna, 'es');
     if (c !== 0) return c;
     return a.audTimestamp - b.audTimestamp;
@@ -1370,6 +1638,7 @@ document.getElementById('btnExport').addEventListener('click', () => {
     const row = baseHeaders.map(h => r.raw[h] !== undefined ? r.raw[h] : '');
     const linkMaps = (r.lat !== null && r.lon !== null) ? 'https://maps.google.com/?q=' + r.lat + ',' + r.lon : '';
     row.push(
+      r.selectedForRoute && r.routeOrder ? r.routeOrder : '',
       r.resultadoTerreno || '',
       r.observacionTerreno || '',
       r.fechaGestionTerreno || '',
@@ -1385,10 +1654,10 @@ document.getElementById('btnExport').addEventListener('click', () => {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Notificaciones_Gestionadas');
   const todayStr = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, 'Notificaciones_Terreno_' + todayStr + '.xlsx');
+  XLSX.writeFile(wb, 'Respaldo_Notificaciones_' + todayStr + '.xlsx');
 });
 
-['filterComuna', 'filterEnte', 'filterEstado', 'sortMode'].forEach(id => {
+['filterComuna', 'filterEnte', 'filterEstadoNotif', 'filterVista', 'sortMode'].forEach(id => {
   document.getElementById(id).addEventListener('change', renderList);
 });
 document.getElementById('searchInput').addEventListener('input', renderList);
@@ -1411,3 +1680,4 @@ ensureLibrariesLoaded();
 </script>
 </body>
 </html>
+Analizando
