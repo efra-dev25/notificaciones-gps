@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="theme-color" content="#1e3a8a" />
   <title>Gestión de Notificaciones UNIJUD — Planilla de Viaje y Ruta GPS</title>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <style>
@@ -755,6 +755,9 @@ async function ensureLibrariesLoaded() {
   const el = document.getElementById('statsLib');
   el.textContent = 'Cargando motores Excel/PDF...';
 
+  if (typeof XLSX === 'undefined') {
+    await loadFallbackScript('https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js');
+  }
   if (typeof XLSX === 'undefined') {
     await loadFallbackScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
   }
@@ -1540,7 +1543,7 @@ function getTripHeaderValues() {
   };
 }
 
-// 1) EXPORTACIÓN HOJA DE RUTA EN EXCEL (MODELO ADJUNTO "Formato hoja de RUTA.xlsx")
+// 1) EXPORTACIÓN HOJA DE RUTA EN EXCEL (OFICIO 8,5x13" HORIZONTAL ESTILIZADO IGUAL AL PDF)
 document.getElementById('btnExportRouteExcel').addEventListener('click', () => {
   if (typeof XLSX === 'undefined') {
     alert('La librería Excel aún no termina de cargar.');
@@ -1557,45 +1560,186 @@ document.getElementById('btnExportRouteExcel').addEventListener('click', () => {
   const kmsInicial = (kmsParts[0] || '').trim();
   const kmsFinal = (kmsParts[1] || '').trim();
 
+  // 7 columnas (A..G) idénticas al formato PDF para que el título completo y datos queden listos sin editar
   const aoa = [
-    ['', 'PLANILLA DE VIAJE NOTIFICACIONES JUZGADO DE GARANTIA ILLAPEL', '', '', '', ''],
-    ['', '', '', 'FECHA: ' + meta.fecha, '', 'Patente Taxi: ' + meta.patente],
-    ['', '', '', 'HORA INICIO: ' + meta.horaInicio, '', 'DESTINO: ' + meta.destino + '   TÉRMINO: ' + meta.termino],
-    ['', '', '', 'KMS INICIAL: ' + kmsInicial, '', 'KMS FINAL: ' + kmsFinal],
-    ['N°', 'RIT', 'año', 'TIPO NOTIF', 'PERSONAAFECTANOTIFICACION', 'DIRECCIONNOTIF']
+    ['PLANILLA DE VIAJE NOTIFICACIONES JUZGADO DE GARANTÍA ILLAPEL', '', '', '', '', '', ''],
+    ['', '', 'FECHA: ' + meta.fecha, '', 'Patente Taxi: ' + meta.patente, '', ''],
+    ['', '', 'HORA INICIO: ' + meta.horaInicio, '', 'DESTINO: ' + meta.destino + '     TÉRMINO: ' + meta.termino, '', ''],
+    ['', '', 'KMS INICIAL: ' + kmsInicial, '', 'KMS FINAL: ' + kmsFinal, '', ''],
+    ['', '', '', '', '', '', ''],
+    ['N°', 'RIT', 'AÑO', 'TIPO NOTIF.', 'PERSONA AFECTA NOTIFICACIÓN', 'DIRECCIÓN NOTIFICACIÓN', 'AUD. PRÓX.']
   ];
 
-  routeItems.forEach((r, idx) => {
-    const dirCompleta = r.domicilio
-      ? r.domicilio + (r.comuna && r.comuna !== 'Sin Comuna' ? ', ' + r.comuna : '')
-      : (r.detalleDireccion || '');
+  const totalRows = Math.max(19, routeItems.length);
+  for (let i = 0; i < totalRows; i++) {
+    if (i < routeItems.length) {
+      const r = routeItems[i];
+      const dirCompleta = r.domicilio
+        ? r.domicilio + (r.comuna && r.comuna !== 'Sin Comuna' ? ', ' + r.comuna : '')
+        : (r.detalleDireccion || '');
+      const audInfo = r.fechaAud ? (r.fechaAud + (r.horaAud ? ' ' + r.horaAud : '')) : '';
 
-    aoa.push([
-      idx + 1,
-      r.ritNum || r.rit || '',
-      r.ritAnio || '',
-      r.tipoNotif || '',
-      r.nombre || '',
-      dirCompleta
-    ]);
-  });
-
-  for (let n = routeItems.length + 1; n <= 19; n++) {
-    aoa.push([n, '', '', '', '', '']);
+      aoa.push([
+        i + 1,
+        r.ritNum || r.rit || '',
+        r.ritAnio || '',
+        r.tipoNotif || '',
+        r.nombre || '',
+        dirCompleta,
+        audInfo
+      ]);
+    } else {
+      aoa.push([i + 1, '', '', '', '', '', '']);
+    }
   }
 
+  // Fila de pie / firma del notificador
+  aoa.push(['', '', '', '', '', '', '']);
+  aoa.push(['Juzgado de Garantía de Illapel — Planilla de Viaje Notificaciones', '', '', '', 'Firma Notificador: ___________________________', '', '']);
+
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [
-    { wch: 6 },
-    { wch: 10 },
-    { wch: 8 },
-    { wch: 22 },
-    { wch: 42 },
-    { wch: 52 }
+
+  // Combinar celdas para título completo, bloques de cabecera y pie de firma
+  ws['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }, // Título principal A1:G1 completo
+    { s: { r: 1, c: 2 }, e: { r: 1, c: 3 } }, // FECHA C2:D2
+    { s: { r: 1, c: 4 }, e: { r: 1, c: 6 } }, // Patente Taxi E2:G2
+    { s: { r: 2, c: 2 }, e: { r: 2, c: 3 } }, // HORA INICIO C3:D3
+    { s: { r: 2, c: 4 }, e: { r: 2, c: 6 } }, // DESTINO / TÉRMINO E3:G3
+    { s: { r: 3, c: 2 }, e: { r: 3, c: 3 } }, // KMS INICIAL C4:D4
+    { s: { r: 3, c: 4 }, e: { r: 3, c: 6 } }, // KMS FINAL E4:G4
+    { s: { r: 6 + totalRows + 1, c: 0 }, e: { r: 6 + totalRows + 1, c: 3 } }, // Pie izq
+    { s: { r: 6 + totalRows + 1, c: 4 }, e: { r: 6 + totalRows + 1, c: 6 } }  // Firma der
   ];
+
+  // Estilos visuales idénticos al PDF (bordes, alineación, ajustes de texto, encabezados sombreados)
+  const thinBorder = {
+    top: { style: 'thin', color: { rgb: '64748B' } },
+    bottom: { style: 'thin', color: { rgb: '64748B' } },
+    left: { style: 'thin', color: { rgb: '64748B' } },
+    right: { style: 'thin', color: { rgb: '64748B' } }
+  };
+
+  const titleStyle = {
+    font: { name: 'Arial', sz: 13, bold: true, color: { rgb: '0F172A' } },
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+  };
+
+  const metaBoxStyle = {
+    font: { name: 'Arial', sz: 9.5, bold: true, color: { rgb: '0F172A' } },
+    fill: { fgColor: { rgb: 'F8FAFC' } },
+    border: thinBorder,
+    alignment: { horizontal: 'left', vertical: 'center', wrapText: true }
+  };
+
+  const tableHeaderStyle = {
+    font: { name: 'Arial', sz: 9.5, bold: true, color: { rgb: '0F172A' } },
+    fill: { fgColor: { rgb: 'E2E8F0' } },
+    border: thinBorder,
+    alignment: { horizontal: 'center', vertical: 'center', wrapText: true }
+  };
+
+  const footerStyle = {
+    font: { name: 'Arial', sz: 9, italic: true, color: { rgb: '475569' } },
+    alignment: { horizontal: 'left', vertical: 'center' }
+  };
+
+  // Aplicar estilo al título A1:G1
+  for (let c = 0; c <= 6; c++) {
+    const addr = XLSX.utils.encode_cell({ r: 0, c });
+    if (ws[addr]) ws[addr].s = titleStyle;
+  }
+
+  // Aplicar estilo a recuadros de cabecera de viaje (filas 1..3, columnas C..G)
+  for (let r = 1; r <= 3; r++) {
+    for (let c = 2; c <= 6; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+      ws[addr].s = metaBoxStyle;
+    }
+  }
+
+  // Aplicar estilo a cabecera de tabla (fila 5 -> índice 5)
+  for (let c = 0; c <= 6; c++) {
+    const addr = XLSX.utils.encode_cell({ r: 5, c });
+    if (ws[addr]) ws[addr].s = tableHeaderStyle;
+  }
+
+  // Aplicar estilo a filas de datos (filas 6 .. 6 + totalRows - 1)
+  for (let r = 6; r < 6 + totalRows; r++) {
+    for (let c = 0; c <= 6; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+      const horizAlign = (c === 0 || c === 2 || c === 6) ? 'center' : 'left';
+      ws[addr].s = {
+        font: { name: 'Arial', sz: 9, bold: (c === 0 || c === 1), color: { rgb: '0F172A' } },
+        border: thinBorder,
+        alignment: { horizontal: horizAlign, vertical: 'center', wrapText: true }
+      };
+    }
+  }
+
+  // Estilo fila de firma
+  const sigRowIdx = 6 + totalRows + 1;
+  for (let c = 0; c <= 6; c++) {
+    const addr = XLSX.utils.encode_cell({ r: sigRowIdx, c });
+    if (ws[addr]) {
+      ws[addr].s = c >= 4
+        ? { font: { name: 'Arial', sz: 9.5, bold: true, color: { rgb: '0F172A' } }, alignment: { horizontal: 'right', vertical: 'center' } }
+        : footerStyle;
+    }
+  }
+
+  // Anchos de columna calibrados para Oficio Horizontal (8,5" x 13" -> 13" de ancho útil)
+  ws['!cols'] = [
+    { wch: 5 },   // N°
+    { wch: 9 },   // RIT
+    { wch: 7 },   // AÑO
+    { wch: 21 },  // TIPO NOTIF.
+    { wch: 36 },  // PERSONA AFECTA NOTIFICACIÓN
+    { wch: 46 },  // DIRECCIÓN NOTIFICACIÓN
+    { wch: 16 }   // AUD. PRÓX.
+  ];
+
+  // Alturas de fila holgadas para evitar cortes de texto
+  const rowHeights = [
+    { hpt: 24 }, // Título
+    { hpt: 19 }, // Meta 1
+    { hpt: 19 }, // Meta 2
+    { hpt: 19 }, // Meta 3
+    { hpt: 8 },  // Separador
+    { hpt: 22 }  // Encabezado tabla
+  ];
+  for (let i = 0; i < totalRows; i++) {
+    rowHeights.push({ hpt: 22 });
+  }
+  rowHeights.push({ hpt: 12 });
+  rowHeights.push({ hpt: 22 });
+  ws['!rows'] = rowHeights;
+
+  // Configuración de página: Tamaño Oficio / Folio 8,5" x 13" (paperSize: 14), Orientación Horizontal (landscape) y ajuste a 1 página de ancho
+  ws['!pageSetup'] = {
+    paperSize: 14,
+    orientation: 'landscape',
+    fitToWidth: 1,
+    fitToHeight: 1,
+    scale: 100
+  };
+  ws['!margins'] = {
+    left: 0.35,
+    right: 0.35,
+    top: 0.4,
+    bottom: 0.4,
+    header: 0.2,
+    footer: 0.2
+  };
+  ws['!sheetViews'] = [{ showGridLines: true }];
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Hoja1');
+  if (!wb.Props) wb.Props = {};
+  wb.Props.Title = 'PLANILLA DE VIAJE NOTIFICACIONES JUZGADO DE GARANTÍA ILLAPEL';
+
   const isoDate = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, 'Planilla_Viaje_Notificaciones_' + isoDate + '.xlsx');
 });
