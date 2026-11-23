@@ -155,7 +155,7 @@
 
     .filters-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
       gap: 8px;
     }
     select, input[type="text"], input[type="number"], textarea {
@@ -167,6 +167,95 @@
       background: #fff;
       color: var(--text);
     }
+
+    /* Multi-select Dropdowns */
+    .ms-dropdown {
+      position: relative;
+      width: 100%;
+    }
+    .ms-btn {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      background: #fff;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+    .ms-btn.has-active {
+      border-color: var(--primary-light);
+      background: #eff6ff;
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .ms-btn-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ms-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      min-width: 230px;
+      max-height: 270px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1.5px solid #93c5fd;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.18);
+      z-index: 80;
+      padding: 6px;
+    }
+    .ms-panel.open { display: block; }
+    .ms-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 4px;
+      padding-bottom: 6px;
+      margin-bottom: 5px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .ms-actions button {
+      flex: 1;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 4px 6px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      cursor: pointer;
+    }
+    .ms-actions button:hover { background: #e2e8f0; }
+    .ms-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ms-option:hover { background: #f8fafc; }
+    .ms-option input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary-light);
+      margin: 0;
+      cursor: pointer;
+    }
+
     .stats-bar {
       display: flex;
       justify-content: space-between;
@@ -211,6 +300,7 @@
       transition: width 0.2s;
     }
 
+    /* Tarjetas y Drag & Drop */
     .card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -219,11 +309,29 @@
       padding: 12px 13px;
       margin-bottom: 10px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
     }
     .card.selected-route {
       border-color: #2563eb;
       background: #f8fbff;
       box-shadow: 0 2px 8px rgba(37, 99, 235, 0.14);
+      cursor: grab;
+    }
+    .card.selected-route:active {
+      cursor: grabbing;
+    }
+    .card.dragging {
+      opacity: 0.45;
+      transform: scale(0.99);
+      border: 2px dashed #1e3a8a;
+    }
+    .card.drag-over-top {
+      border-top: 4px solid #16a34a !important;
+      box-shadow: 0 -4px 10px rgba(22, 163, 74, 0.25);
+    }
+    .card.drag-over-bottom {
+      border-bottom: 4px solid #16a34a !important;
+      box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);
     }
     .card.done { border-left-color: var(--success); background: #f8fafc; }
     .card.vif { border-top: 2px solid #dc2626; }
@@ -238,6 +346,21 @@
       display: flex;
       align-items: flex-start;
       gap: 9px;
+    }
+    .drag-handle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #dbeafe;
+      color: #1e3a8a;
+      border: 1px solid #93c5fd;
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      cursor: grab;
+      user-select: none;
+      margin-top: 1px;
     }
     .route-checkbox {
       width: 21px;
@@ -299,16 +422,14 @@
       gap: 6px;
       align-items: center;
     }
-    .btn-move {
-      background: #eff6ff;
+    .drag-hint-pill {
+      font-size: 0.74rem;
       color: #1e3a8a;
-      border: 1px solid #93c5fd;
-      font-weight: 800;
-      padding: 6px 10px;
-    }
-    .btn-move:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
+      background: #eff6ff;
+      border: 1px dashed #93c5fd;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: 600;
     }
 
     /* Modal */
@@ -403,20 +524,45 @@
       <button type="button" class="btn btn-outline btn-sm" id="btnClear">🗑️ Limpiar Datos</button>
     </div>
 
-    <!-- Filtros -->
+    <!-- Filtros Multi-Selección y Vistas -->
     <div class="filters-grid">
-      <select id="filterComuna">
-        <option value="">Todas las Comunas</option>
-      </select>
-      <select id="filterEnte">
-        <option value="">Todos los Entes</option>
-      </select>
+      <!-- Multi-select Comunas -->
+      <div class="ms-dropdown" id="msComunaWrapper">
+        <button type="button" class="ms-btn" id="msComunaBtn" onclick="toggleMultiDropdown('msComunaPanel', event)">
+          <span class="ms-btn-text" id="msComunaLabel">Comunas: Todas</span>
+          <span>▾</span>
+        </button>
+        <div class="ms-panel" id="msComunaPanel" onclick="event.stopPropagation()">
+          <div class="ms-actions">
+            <button type="button" onclick="selectAllMulti('comuna', true)">Todas</button>
+            <button type="button" onclick="selectAllMulti('comuna', false)">Limpiar</button>
+          </div>
+          <div id="msComunaOptions"></div>
+        </div>
+      </div>
+
+      <!-- Multi-select Ente Notificador -->
+      <div class="ms-dropdown" id="msEnteWrapper">
+        <button type="button" class="ms-btn" id="msEnteBtn" onclick="toggleMultiDropdown('msEntePanel', event)">
+          <span class="ms-btn-text" id="msEnteLabel">Ente Notificador: Todos</span>
+          <span>▾</span>
+        </button>
+        <div class="ms-panel" id="msEntePanel" onclick="event.stopPropagation()">
+          <div class="ms-actions">
+            <button type="button" onclick="selectAllMulti('ente', true)">Todos</button>
+            <button type="button" onclick="selectAllMulti('ente', false)">Limpiar</button>
+          </div>
+          <div id="msEnteOptions"></div>
+        </div>
+      </div>
+
       <select id="filterEstadoNotif">
         <option value="">Todos los Estados (Pend/Env/Tram)</option>
         <option value="Pendiente">Solo Pendiente</option>
         <option value="Enviada">Solo Enviada</option>
         <option value="En tramitacion">Solo En tramitación</option>
       </select>
+
       <select id="filterVista">
         <option value="TODOS">Vista: Todas las Filtradas</option>
         <option value="SELECCIONADAS">Vista: Solo en Hoja de Ruta</option>
@@ -428,7 +574,7 @@
     <div class="filters-grid">
       <input type="text" id="searchInput" placeholder="Buscar por RIT, RUC, nombre, RUT o domicilio..." />
       <select id="sortMode">
-        <option value="RUTA_FIRST">Orden: Paradas de Ruta Primero (Manual / GPS)</option>
+        <option value="RUTA_FIRST">Orden: Paradas de Ruta Primero (Arrastrar / GPS)</option>
         <option value="AUD_ONLY">Orden: Audiencia más Próxima</option>
         <option value="COMUNA_AUD">Orden: Comuna + Audiencia Próxima</option>
       </select>
@@ -545,8 +691,8 @@
 </div>
 
 <script>
-const STORAGE_KEY = 'unijud_planilla_viaje_v7';
-const META_KEY = 'unijud_planilla_viaje_meta_v7';
+const STORAGE_KEY = 'unijud_planilla_viaje_v8';
+const META_KEY = 'unijud_planilla_viaje_meta_v8';
 
 const PRESET_ORIGINS = {
   JUZGADO_ILLAPEL: { label: 'Juzgado de Garantía de Illapel', lat: -31.6327, lon: -71.1653 },
@@ -562,8 +708,29 @@ let selectedOutcome = '';
 let currentModalGps = null;
 let recognition = null;
 
+// Conjuntos para filtros multi-selección (vacío = todos seleccionados)
+let selectedComunas = new Set();
+let selectedEntes = new Set();
+
+// Estado de Drag & Drop
+let draggedRecordId = null;
+let dropInsertAfter = false;
+
 // Inicializar fecha de hoy por defecto en cabecera de viaje
 document.getElementById('metaFecha').value = new Date().toLocaleDateString('es-CL');
+
+// Cerrar paneles multi-select al hacer clic fuera
+document.addEventListener('click', () => {
+  document.querySelectorAll('.ms-panel').forEach(p => p.classList.remove('open'));
+});
+
+function toggleMultiDropdown(panelId, evt) {
+  evt.stopPropagation();
+  const target = document.getElementById(panelId);
+  const wasOpen = target.classList.contains('open');
+  document.querySelectorAll('.ms-panel').forEach(p => p.classList.remove('open'));
+  if (!wasOpen) target.classList.add('open');
+}
 
 function showAlert(msg) {
   const el = document.getElementById('alertBanner');
@@ -665,7 +832,6 @@ function formatExcelCell(val) {
 
 function splitRitParts(ritStr) {
   const clean = String(ritStr || '').trim();
-  // Ej: "O-725-2026" -> numero: "725", anio: "2026"
   const m = clean.match(/^(?:[A-Za-z]+-)?(\d+)-(\d{4})$/);
   if (m) {
     return { ritNum: m[1], ritAnio: m[2] };
@@ -680,8 +846,6 @@ function splitRitParts(ritStr) {
 function extractCleanComuna(rawComuna, rawDomicilio) {
   const s = String(rawComuna || '').trim();
   if (s) {
-    // En reporte "Notificaciones - detalle por fecha de trámite", COMUNA suele traer:
-    // "LAS AÑAÑUCAS 237 DEPTO  , ILLAPEL (PARTICULAR)"
     const m = s.match(/,\s*([A-ZÁÉÍÓÚÑ\s]+?)\s*\([^)]+\)\s*$/i);
     if (m) {
       return toTitleCase(m[1].trim());
@@ -693,7 +857,6 @@ function extractCleanComuna(rawComuna, rawDomicilio) {
     const last = parts[parts.length - 1].replace(/\([^)]*\)/g, '').trim();
     if (last && last.length <= 28) return toTitleCase(last);
   }
-  // Fallback desde domicilio si menciona comuna conocida
   const domUpper = String(rawDomicilio || '').toUpperCase();
   for (const c of ['ILLAPEL', 'SALAMANCA', 'LOS VILOS', 'CANELA']) {
     if (domUpper.includes(c)) return toTitleCase(c);
@@ -711,7 +874,6 @@ function toTitleCase(str) {
 
 function isAllowedEstadoNotificacion(estadoStr) {
   const norm = stripAccentsLower(estadoStr);
-  // Pendiente, Enviada, Enviadas, En tramitación
   return norm === 'pendiente' || norm === 'enviada' || norm === 'enviadas' || norm === 'en tramitacion';
 }
 
@@ -767,8 +929,6 @@ window.procesarExcel = async function(inputEl) {
 
       const hasEstadoCol = normHeaders.includes('ESTADO_NOTIFICACION');
       let totalLeidas = 0;
-      let descartadasEstado = 0;
-      let descartadasTipo = 0;
 
       const parsedRecords = [];
       dataRows.forEach((rowArr, idx) => {
@@ -791,18 +951,17 @@ window.procesarExcel = async function(inputEl) {
 
         const estadoNotif = formatExcelCell(normObj['ESTADO_NOTIFICACION']);
         if (hasEstadoCol && !isAllowedEstadoNotificacion(estadoNotif)) {
-          descartadasEstado++;
           return;
         }
 
         const tipoNotif = formatExcelCell(normObj['TIPO_NOTIFICACION']);
         if (isExcludedTipoNotificacion(tipoNotif)) {
-          descartadasTipo++;
           return;
         }
 
         const rawComuna = formatExcelCell(normObj['COMUNA']);
         const comuna = extractCleanComuna(rawComuna, domicilio);
+        const ente = formatExcelCell(normObj['ENTE_NOTIFICADOR']) || 'Sin Ente';
         const fechaAud = formatExcelCell(normObj['FECHA_AUD']);
         const horaAud = formatExcelCell(normObj['HORA_AUD']);
         const { ritNum, ritAnio } = splitRitParts(rit);
@@ -824,7 +983,7 @@ window.procesarExcel = async function(inputEl) {
           domicilio: domicilio,
           detalleDireccion: rawComuna,
           comuna: comuna,
-          ente: formatExcelCell(normObj['ENTE_NOTIFICADOR']),
+          ente: ente,
           fechaTramite: formatExcelCell(normObj['FECHA_TRAMITE']),
           fechaAud: fechaAud,
           horaAud: horaAud,
@@ -853,6 +1012,8 @@ window.procesarExcel = async function(inputEl) {
 
       records = parsedRecords;
       fileMeta = { headerRows: headerRows, rawHeaders: rawHeaders };
+      selectedComunas.clear();
+      selectedEntes.clear();
       saveState();
       populateFilters();
       renderList();
@@ -879,32 +1040,53 @@ function loadState() {
   } catch (e) {}
 }
 
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function populateFilters() {
-  const comunas = [...new Set(records.map(r => r.comuna).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
-  const entes = [...new Set(records.map(r => r.ente).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
-
-  const selComuna = document.getElementById('filterComuna');
-  const prevComuna = selComuna.value;
-  selComuna.innerHTML = '<option value="">Todas las Comunas (' + records.length + ')</option>';
-  comunas.forEach(c => {
-    const count = records.filter(r => r.comuna === c).length;
-    const opt = document.createElement('option');
-    opt.value = c;
-    opt.textContent = c + ' (' + count + ')';
-    selComuna.appendChild(opt);
+  // Asegurar que "Sin Comuna" siempre aparezca entre las opciones disponibles
+  const comunaSet = new Set(records.map(r => r.comuna || 'Sin Comuna'));
+  comunaSet.add('Sin Comuna');
+  const comunas = [...comunaSet].sort((a, b) => {
+    if (a === 'Sin Comuna') return 1;
+    if (b === 'Sin Comuna') return -1;
+    return a.localeCompare(b, 'es');
   });
-  if (comunas.includes(prevComuna)) selComuna.value = prevComuna;
 
-  const selEnte = document.getElementById('filterEnte');
-  const prevEnte = selEnte.value;
-  selEnte.innerHTML = '<option value="">Todos los Entes</option>';
-  entes.forEach(en => {
-    const opt = document.createElement('option');
-    opt.value = en;
-    opt.textContent = en;
-    selEnte.appendChild(opt);
-  });
-  if (entes.includes(prevEnte)) selEnte.value = prevEnte;
+  const entes = [...new Set(records.map(r => r.ente || 'Sin Ente'))].sort((a, b) => a.localeCompare(b, 'es'));
+
+  // Renderizar opciones multi-select de Comunas
+  const comunaContainer = document.getElementById('msComunaOptions');
+  comunaContainer.innerHTML = comunas.map(c => {
+    const count = records.filter(r => (r.comuna || 'Sin Comuna') === c).length;
+    const checked = selectedComunas.has(c) ? 'checked' : '';
+    return `
+      <label class="ms-option">
+        <input type="checkbox" value="${escapeHtml(c)}" ${checked} onchange="toggleMultiItem('comuna', this.value, this.checked)" />
+        <span>${escapeHtml(c)} <strong>(${count})</strong></span>
+      </label>
+    `;
+  }).join('');
+
+  // Renderizar opciones multi-select de Ente Notificador
+  const enteContainer = document.getElementById('msEnteOptions');
+  enteContainer.innerHTML = entes.map(en => {
+    const count = records.filter(r => (r.ente || 'Sin Ente') === en).length;
+    const checked = selectedEntes.has(en) ? 'checked' : '';
+    return `
+      <label class="ms-option">
+        <input type="checkbox" value="${escapeHtml(en)}" ${checked} onchange="toggleMultiItem('ente', this.value, this.checked)" />
+        <span>${escapeHtml(en)} <strong>(${count})</strong></span>
+      </label>
+    `;
+  }).join('');
+
+  updateMultiLabels();
 
   if (fileMeta.headerRows && fileMeta.headerRows.length > 1) {
     const titleLine = fileMeta.headerRows.map(r => r.filter(Boolean).join(' ')).filter(Boolean).slice(0, 3).join(' · ');
@@ -912,17 +1094,67 @@ function populateFilters() {
   }
 }
 
+function toggleMultiItem(type, value, isChecked) {
+  const targetSet = type === 'comuna' ? selectedComunas : selectedEntes;
+  if (isChecked) {
+    targetSet.add(value);
+  } else {
+    targetSet.delete(value);
+  }
+  updateMultiLabels();
+  renderList();
+}
+
+function selectAllMulti(type, selectAll) {
+  const targetSet = type === 'comuna' ? selectedComunas : selectedEntes;
+  const containerId = type === 'comuna' ? 'msComunaOptions' : 'msEnteOptions';
+  targetSet.clear();
+
+  const checkboxes = document.querySelectorAll('#' + containerId + ' input[type="checkbox"]');
+  checkboxes.forEach(cb => {
+    cb.checked = selectAll;
+    if (selectAll) targetSet.add(cb.value);
+  });
+
+  updateMultiLabels();
+  renderList();
+}
+
+function updateMultiLabels() {
+  const cBtn = document.getElementById('msComunaBtn');
+  const cLbl = document.getElementById('msComunaLabel');
+  if (selectedComunas.size === 0) {
+    cLbl.textContent = 'Comunas: Todas (' + records.length + ')';
+    cBtn.classList.remove('has-active');
+  } else {
+    cLbl.textContent = 'Comunas (' + selectedComunas.size + '): ' + [...selectedComunas].join(', ');
+    cBtn.classList.add('has-active');
+  }
+
+  const eBtn = document.getElementById('msEnteBtn');
+  const eLbl = document.getElementById('msEnteLabel');
+  if (selectedEntes.size === 0) {
+    eLbl.textContent = 'Ente Notificador: Todos';
+    eBtn.classList.remove('has-active');
+  } else {
+    eLbl.textContent = 'Entes (' + selectedEntes.size + '): ' + [...selectedEntes].join(', ');
+    eBtn.classList.add('has-active');
+  }
+}
+
 function getFilteredAndSorted() {
-  const fComuna = document.getElementById('filterComuna').value;
-  const fEnte = document.getElementById('filterEnte').value;
   const fEstadoNotif = document.getElementById('filterEstadoNotif').value;
   const fVista = document.getElementById('filterVista').value;
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   const sortMode = document.getElementById('sortMode').value;
 
   let list = records.filter(r => {
-    if (fComuna && r.comuna !== fComuna) return false;
-    if (fEnte && r.ente !== fEnte) return false;
+    const recComuna = r.comuna || 'Sin Comuna';
+    const recEnte = r.ente || 'Sin Ente';
+
+    if (selectedComunas.size > 0 && !selectedComunas.has(recComuna)) return false;
+    if (selectedEntes.size > 0 && !selectedEntes.has(recEnte)) return false;
+
     if (fEstadoNotif) {
       if (stripAccentsLower(r.estadoNotif) !== stripAccentsLower(fEstadoNotif)) return false;
     }
@@ -931,7 +1163,7 @@ function getFilteredAndSorted() {
     if (fVista === 'GESTIONADAS' && !r.resultadoTerreno) return false;
 
     if (q) {
-      const hay = (r.rit + ' ' + r.ruc + ' ' + r.nombre + ' ' + r.rut + ' ' + r.domicilio + ' ' + r.comuna + ' ' + r.tipoNotif).toLowerCase();
+      const hay = (r.rit + ' ' + r.ruc + ' ' + r.nombre + ' ' + r.rut + ' ' + r.domicilio + ' ' + recComuna + ' ' + r.tipoNotif).toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
@@ -948,9 +1180,9 @@ function getFilteredAndSorted() {
     }
     if (sortMode === 'AUD_ONLY') {
       if (a.audTimestamp !== b.audTimestamp) return a.audTimestamp - b.audTimestamp;
-      return a.comuna.localeCompare(b.comuna, 'es');
+      return (a.comuna || '').localeCompare(b.comuna || '', 'es');
     }
-    const cmpComuna = a.comuna.localeCompare(b.comuna, 'es');
+    const cmpComuna = (a.comuna || '').localeCompare(b.comuna || '', 'es');
     if (cmpComuna !== 0) return cmpComuna;
     if (a.audTimestamp !== b.audTimestamp) return a.audTimestamp - b.audTimestamp;
     return a.rit.localeCompare(b.rit, 'es');
@@ -988,26 +1220,75 @@ function toggleSelectRecord(id) {
   renderList();
 }
 
-function moveRouteStop(id, dir) {
-  const selected = getOrderedRouteRecords();
-  const idx = selected.findIndex(r => r.id === id);
-  if (idx === -1) return;
-  const swapIdx = idx + dir;
-  if (swapIdx < 0 || swapIdx >= selected.length) return;
+// --- DRAG & DROP PARA ORDENAMIENTO MANUAL DE PARADAS ---
+function handleCardDragStart(evt, id) {
+  const rec = records.find(r => r.id === id);
+  if (!rec || !rec.selectedForRoute) {
+    evt.preventDefault();
+    return;
+  }
+  draggedRecordId = id;
+  dropInsertAfter = false;
+  evt.dataTransfer.effectAllowed = 'move';
+  evt.dataTransfer.setData('text/plain', id);
+  setTimeout(() => {
+    if (evt.target && evt.target.classList) evt.target.classList.add('dragging');
+  }, 0);
+}
 
-  // Intercambiar posiciones en el arreglo ordenado y renumerar 1..N
-  const movedItem = selected[idx];
-  selected.splice(idx, 1);
-  selected.splice(swapIdx, 0, movedItem);
+function handleCardDragOver(evt, targetId) {
+  if (!draggedRecordId || draggedRecordId === targetId) return;
+  const targetRec = records.find(r => r.id === targetId);
+  if (!targetRec || !targetRec.selectedForRoute) return;
 
-  selected.forEach((item, i) => {
-    item.routeOrder = i + 1;
+  evt.preventDefault();
+  evt.dataTransfer.dropEffect = 'move';
+
+  const cardEl = evt.currentTarget;
+  const rect = cardEl.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+  dropInsertAfter = evt.clientY > midY;
+
+  cardEl.classList.remove('drag-over-top', 'drag-over-bottom');
+  cardEl.classList.add(dropInsertAfter ? 'drag-over-bottom' : 'drag-over-top');
+}
+
+function handleCardDragLeave(evt) {
+  evt.currentTarget.classList.remove('drag-over-top', 'drag-over-bottom');
+}
+
+function handleCardDrop(evt, targetId) {
+  evt.preventDefault();
+  evt.currentTarget.classList.remove('drag-over-top', 'drag-over-bottom');
+  if (!draggedRecordId || draggedRecordId === targetId) return;
+
+  const ordered = getOrderedRouteRecords();
+  const fromIdx = ordered.findIndex(r => r.id === draggedRecordId);
+  let toIdx = ordered.findIndex(r => r.id === targetId);
+  if (fromIdx === -1 || toIdx === -1) return;
+
+  const [moved] = ordered.splice(fromIdx, 1);
+  // Recalcular índice destino tras extraer el elemento movido
+  toIdx = ordered.findIndex(r => r.id === targetId);
+  const insertIdx = dropInsertAfter ? toIdx + 1 : toIdx;
+  ordered.splice(insertIdx, 0, moved);
+
+  ordered.forEach((item, idx) => {
+    item.routeOrder = idx + 1;
     item.distFromPrevKm = null;
   });
 
+  draggedRecordId = null;
   document.getElementById('sortMode').value = 'RUTA_FIRST';
   saveState();
   renderList();
+}
+
+function handleCardDragEnd(evt) {
+  draggedRecordId = null;
+  document.querySelectorAll('.card').forEach(c => {
+    c.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+  });
 }
 
 document.getElementById('btnSelectTop').addEventListener('click', () => {
@@ -1046,7 +1327,7 @@ function renderList() {
   document.getElementById('selectedBadge').textContent = totalSelected + ' en hoja de ruta';
 
   if (list.length === 0) {
-    container.innerHTML = '<div class="card" style="text-align:center; color:#64748b;">No hay diligencias cargadas o que coincidan con el filtro.</div>';
+    container.innerHTML = '<div class="card" style="text-align:center; color:#64748b;">No hay diligencias cargadas o que coincidan con el filtro seleccionado.</div>';
     updateFullMapsLink(selectedList);
     return;
   }
@@ -1056,47 +1337,49 @@ function renderList() {
     const hasCoords = r.lat !== null && r.lon !== null;
     const mapsQuery = hasCoords
       ? 'https://www.google.com/maps/dir/?api=1&destination=' + r.lat + ',' + r.lon + '&travelmode=driving'
-      : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((r.domicilio || '') + ', ' + r.comuna + ', Chile');
+      : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((r.domicilio || '') + ', ' + (r.comuna === 'Sin Comuna' ? 'Illapel' : r.comuna) + ', Chile');
 
     const audLabel = r.fechaAud ? '📅 Aud: ' + r.fechaAud + ' ' + (r.horaAud || '') : 'Sin fecha aud.';
     const paradaBadge = (r.selectedForRoute && r.routeOrder !== null)
       ? '<span class="tag tag-route">Parada #' + r.routeOrder + (r.distFromPrevKm !== null ? ' · ' + r.distFromPrevKm.toFixed(1) + ' km' : '') + '</span>'
       : '';
 
-    const isFirstStop = r.routeOrder === 1;
-    const isLastStop = r.routeOrder === totalSelected;
+    const dragAttrs = r.selectedForRoute
+      ? `draggable="true" ondragstart="handleCardDragStart(event, '${r.id}')" ondragover="handleCardDragOver(event, '${r.id}')" ondragleave="handleCardDragLeave(event)" ondrop="handleCardDrop(event, '${r.id}')" ondragend="handleCardDragEnd(event)"`
+      : '';
 
     return `
-      <div class="card ${r.selectedForRoute ? 'selected-route' : ''} ${isDone ? 'done' : ''} ${r.vif ? 'vif' : ''}">
+      <div class="card ${r.selectedForRoute ? 'selected-route' : ''} ${isDone ? 'done' : ''} ${r.vif ? 'vif' : ''}" ${dragAttrs}>
         <div class="card-top">
           <div class="card-check-wrap">
+            ${r.selectedForRoute ? '<span class="drag-handle" title="Mantenga presionado y arrastre hacia arriba o abajo para cambiar el orden">⋮⋮</span>' : ''}
             <input type="checkbox" class="route-checkbox" ${r.selectedForRoute ? 'checked' : ''} onchange="toggleSelectRecord('${r.id}')" title="Incluir en la Hoja de Ruta" />
             <div>
-              <div class="rit-badge">${r.rit || 'S/RIT'} <span class="ruc-text">(${r.ruc})</span></div>
-              <div class="ruc-text">${r.comuna.toUpperCase()} · ${r.ente || 'Sin ente'} · <strong>${r.tipoNotif}</strong></div>
+              <div class="rit-badge">${escapeHtml(r.rit || 'S/RIT')} <span class="ruc-text">(${escapeHtml(r.ruc)})</span></div>
+              <div class="ruc-text">${escapeHtml(r.comuna.toUpperCase())} · ${escapeHtml(r.ente || 'Sin ente')} · <strong>${escapeHtml(r.tipoNotif)}</strong></div>
             </div>
           </div>
           <div class="badges">
             ${paradaBadge}
-            <span class="tag tag-estado">${r.estadoNotif}</span>
+            <span class="tag tag-estado">${escapeHtml(r.estadoNotif)}</span>
             ${r.vif ? '<span class="tag tag-vif">VIF</span>' : ''}
             <span class="tag tag-aud ${r.fechaAud ? 'urgent' : ''}">${audLabel}</span>
             ${isDone ? '<span class="tag tag-done">GESTIONADA</span>' : ''}
           </div>
         </div>
 
-        <div class="person-name">${r.nombre || 'Sin nombre'} <span style="font-weight:400; font-size:0.82rem; color:#475569;">(${r.tipoPart || 'Interviniente'} · RUT ${r.rut || 'S/R'})</span></div>
+        <div class="person-name">${escapeHtml(r.nombre || 'Sin nombre')} <span style="font-weight:400; font-size:0.82rem; color:#475569;">(${escapeHtml(r.tipoPart || 'Interviniente')} · RUT ${escapeHtml(r.rut || 'S/R')})</span></div>
 
         <div class="address-box">
-          <strong>📍 Domicilio:</strong> ${r.domicilio || '<em>Sin domicilio registrado</em>'} — <strong>${r.comuna}</strong>
+          <strong>📍 Domicilio:</strong> ${r.domicilio ? escapeHtml(r.domicilio) : '<em>Sin domicilio registrado</em>'} — <strong>${escapeHtml(r.comuna)}</strong>
           ${hasCoords ? `<div style="font-size:0.74rem; color:#15803d; margin-top:3px;">🛰️ Coordenadas ubicadas (${r.lat.toFixed(5)}, ${r.lon.toFixed(5)})</div>` : ''}
         </div>
 
         ${isDone ? `
           <div class="result-summary">
-            <strong>Resultado:</strong> ${r.resultadoTerreno}<br>
-            ${r.observacionTerreno ? `<strong>Obs.:</strong> ${r.observacionTerreno}<br>` : ''}
-            <span style="font-size:0.74rem;">Registrado: ${r.fechaGestionTerreno}</span>
+            <strong>Resultado:</strong> ${escapeHtml(r.resultadoTerreno)}<br>
+            ${r.observacionTerreno ? `<strong>Obs.:</strong> ${escapeHtml(r.observacionTerreno)}<br>` : ''}
+            <span style="font-size:0.74rem;">Registrado: ${escapeHtml(r.fechaGestionTerreno)}</span>
           </div>
         ` : ''}
 
@@ -1107,9 +1390,7 @@ function renderList() {
           </div>
           ${r.selectedForRoute ? `
             <div class="card-actions-right">
-              <span style="font-size:0.75rem; color:#1e3a8a; font-weight:700;">Orden:</span>
-              <button type="button" class="btn btn-move btn-sm" onclick="moveRouteStop('${r.id}', -1)" ${isFirstStop ? 'disabled' : ''} title="Subir parada en la ruta">▲ Subir</button>
-              <button type="button" class="btn btn-move btn-sm" onclick="moveRouteStop('${r.id}', 1)" ${isLastStop ? 'disabled' : ''} title="Bajar parada en la ruta">▼ Bajar</button>
+              <span class="drag-hint-pill">↕️ Arrastre la tarjeta para reordenar</span>
             </div>
           ` : ''}
         </div>
@@ -1139,11 +1420,12 @@ document.getElementById('btnGeocodeSelected').addEventListener('click', async ()
   for (let i = 0; i < target.length; i++) {
     if (stopGeoFlag) break;
     const item = target[i];
-    txt.textContent = 'Ubicando ' + (i + 1) + ' de ' + target.length + ': ' + item.domicilio + ', ' + item.comuna;
+    const comunaBusqueda = (item.comuna && item.comuna !== 'Sin Comuna') ? item.comuna : 'Illapel';
+    txt.textContent = 'Ubicando ' + (i + 1) + ' de ' + target.length + ': ' + item.domicilio + ', ' + comunaBusqueda;
     fill.style.width = Math.round(((i + 1) / target.length) * 100) + '%';
 
     try {
-      const q = encodeURIComponent(item.domicilio + ', ' + item.comuna + ', Chile');
+      const q = encodeURIComponent(item.domicilio + ', ' + comunaBusqueda + ', Chile');
       const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + q);
       const data = await resp.json();
       if (data && data.length > 0) {
@@ -1275,7 +1557,6 @@ document.getElementById('btnExportRouteExcel').addEventListener('click', () => {
   const kmsInicial = (kmsParts[0] || '').trim();
   const kmsFinal = (kmsParts[1] || '').trim();
 
-  // Estructura exacta del archivo "Formato hoja de RUTA.xlsx"
   const aoa = [
     ['', 'PLANILLA DE VIAJE NOTIFICACIONES JUZGADO DE GARANTIA ILLAPEL', '', '', '', ''],
     ['', '', '', 'FECHA: ' + meta.fecha, '', 'Patente Taxi: ' + meta.patente],
@@ -1299,7 +1580,6 @@ document.getElementById('btnExportRouteExcel').addEventListener('click', () => {
     ]);
   });
 
-  // Completar hasta al menos 19 filas numeradas si hay menos, igual que el formato modelo
   for (let n = routeItems.length + 1; n <= 19; n++) {
     aoa.push([n, '', '', '', '', '']);
   }
@@ -1340,13 +1620,11 @@ document.getElementById('btnExportRoutePdf').addEventListener('click', () => {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
 
-  // Encabezado replicando "Formato hoja de RUTA.xlsx"
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(15, 23, 42);
   doc.text('PLANILLA DE VIAJE NOTIFICACIONES JUZGADO DE GARANTIA ILLAPEL', 24, 15);
 
-  // Bloque de datos de viaje superior derecho (filas 2-4 del formato)
   doc.autoTable({
     startY: 18,
     margin: { left: 95, right: 12 },
@@ -1387,7 +1665,6 @@ document.getElementById('btnExportRoutePdf').addEventListener('click', () => {
     ];
   });
 
-  // Rellenar filas vacías hasta 19 si hay menos paradas, manteniendo el formato planilla física
   for (let n = routeItems.length + 1; n <= 19; n++) {
     tableBody.push([String(n), '', '', '', '', '', '']);
   }
@@ -1596,7 +1873,6 @@ function closeModal() {
 }
 document.getElementById('btnCancelModal').addEventListener('click', closeModal);
 
-// Respaldo completo en Excel con todas las columnas originales + gestión
 document.getElementById('btnExportAll').addEventListener('click', () => {
   if (records.length === 0) {
     alert('No hay datos cargados para exportar.');
@@ -1629,7 +1905,7 @@ document.getElementById('btnExportAll').addEventListener('click', () => {
   const sortedExport = [...records].sort((a, b) => {
     if (a.selectedForRoute !== b.selectedForRoute) return a.selectedForRoute ? -1 : 1;
     if (a.selectedForRoute && b.selectedForRoute) return (a.routeOrder || 999) - (b.routeOrder || 999);
-    const c = a.comuna.localeCompare(b.comuna, 'es');
+    const c = (a.comuna || '').localeCompare(b.comuna || '', 'es');
     if (c !== 0) return c;
     return a.audTimestamp - b.audTimestamp;
   });
@@ -1657,7 +1933,7 @@ document.getElementById('btnExportAll').addEventListener('click', () => {
   XLSX.writeFile(wb, 'Respaldo_Notificaciones_' + todayStr + '.xlsx');
 });
 
-['filterComuna', 'filterEnte', 'filterEstadoNotif', 'filterVista', 'sortMode'].forEach(id => {
+['filterEstadoNotif', 'filterVista', 'sortMode'].forEach(id => {
   document.getElementById(id).addEventListener('change', renderList);
 });
 document.getElementById('searchInput').addEventListener('input', renderList);
@@ -1666,6 +1942,8 @@ document.getElementById('btnClear').addEventListener('click', () => {
   if (confirm('¿Desea borrar todos los registros almacenados en este dispositivo?')) {
     records = [];
     fileMeta = { headerRows: [], rawHeaders: [] };
+    selectedComunas.clear();
+    selectedEntes.clear();
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(META_KEY);
     populateFilters();
@@ -1680,4 +1958,3 @@ ensureLibrariesLoaded();
 </script>
 </body>
 </html>
-Analizando
